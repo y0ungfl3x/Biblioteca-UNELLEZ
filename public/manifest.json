@@ -1,0 +1,17 @@
+{
+  "name": "Biblioteca UNELLEZ",
+  "short_name": "BiblioUNELLEZ",
+  "description": "Sistema de Gestión Bibliotecaria de la UNELLEZ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ea580c",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

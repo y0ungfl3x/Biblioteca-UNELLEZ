@@ -40,15 +40,18 @@ export default function LoginPage() {
         className="w-full max-w-md bg-white/90 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-2xl overflow-hidden relative z-10"
       >
         <div className="p-8">
-          <div className="flex flex-col items-center justify-center space-y-3 mb-8">
-            <div className="p-3 bg-orange-50 rounded-full border border-orange-100 shadow-inner">
-              <BookOpen className="w-8 h-8 text-orange-600" />
+          <div className="flex flex-col items-center justify-center space-y-4 mb-8">
+            <img src="/logo.png" alt="UNELLEZ" className="h-24 w-auto object-contain" />
+            <div className="text-center">
+              <h1 className="text-3xl font-black text-slate-900 tracking-tighter">
+                UNELLEZ
+              </h1>
+              <p className="text-orange-600 font-bold uppercase tracking-[0.2em] text-[10px] -mt-1">
+                Biblioteca Digital
+              </p>
             </div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-              Biblioteca UNELLEZ
-            </h1>
-            <p className="text-slate-500 text-sm text-center">
-              Ingresa tus credenciales para acceder al sistema
+            <p className="text-slate-500 text-xs text-center max-w-[200px] leading-relaxed">
+              Ingresa tus credenciales institucionales para acceder
             </p>
           </div>
 

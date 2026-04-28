@@ -50,9 +50,12 @@ export default async function CatalogPage({
       {/* Navegación */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2">
-            <BookOpen className="w-7 h-7 text-orange-600" />
-            <span className="font-bold text-xl tracking-tight text-slate-900">UNELLEZ</span>
+          <Link href="/" className="flex items-center space-x-3">
+            <img src="/logo.png" alt="UNELLEZ" className="h-10 w-auto object-contain" />
+            <div className="flex flex-col">
+              <span className="text-xl font-black text-slate-900 tracking-tighter leading-none">UNELLEZ</span>
+              <span className="text-[9px] font-bold text-orange-600 uppercase tracking-widest leading-none mt-1">Biblioteca</span>
+            </div>
           </Link>
 
           <div>

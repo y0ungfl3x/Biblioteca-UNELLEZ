@@ -48,46 +48,77 @@ export default async function UsersPage() {
           </div>
         </div>
 
-        {/* Tabla Central */}
+        {/* Lista de Usuarios (Tabla en Desktop, Cards en Móvil) */}
         <div className="lg:col-span-2">
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-            <table className="w-full text-sm text-left text-slate-600">
-              <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200 font-semibold">
-                <tr>
-                  <th className="px-6 py-4">Nombre / Cédula</th>
-                  <th className="px-6 py-4">Rol</th>
-                  <th className="px-6 py-4 text-right">Estado</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {profiles?.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-slate-900">{p.full_name}</div>
-                      <div className="text-xs text-slate-500 mt-0.5">C.I: {p.cedula}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+            {/* Vista Desktop (Tabla) */}
+            <div className="hidden md:block">
+              <table className="w-full text-sm text-left text-slate-600">
+                <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200 font-semibold">
+                  <tr>
+                    <th className="px-6 py-4">Nombre / Cédula</th>
+                    <th className="px-6 py-4">Rol</th>
+                    <th className="px-6 py-4 text-right">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {profiles?.map((p) => (
+                    <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-semibold text-slate-900">{p.full_name}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">C.I: {p.cedula}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+                          p.role === 'administrador' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                          p.role === 'bibliotecario' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                          'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        }`}>
+                          {p.role}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <span className={`px-2.5 py-1 rounded-md text-xs font-medium border ${
+                          p.status === 'activo' 
+                            ? 'bg-slate-100 text-slate-700 border-slate-200' 
+                            : 'bg-red-50 text-red-600 border-red-200'
+                        }`}>
+                          {p.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Vista Móvil (Cards) */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {profiles?.map((p) => (
+                <div key={p.id} className="p-5 flex items-center justify-between">
+                  <div>
+                    <div className="font-bold text-slate-900">{p.full_name}</div>
+                    <div className="text-[10px] text-slate-500 font-bold tracking-wider uppercase">C.I: {p.cedula}</div>
+                    <div className="mt-2">
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase border ${
                         p.role === 'administrador' ? 'bg-purple-50 text-purple-700 border-purple-200' :
                         p.role === 'bibliotecario' ? 'bg-blue-50 text-blue-700 border-blue-200' :
                         'bg-emerald-50 text-emerald-700 border-emerald-200'
                       }`}>
                         {p.role}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <span className={`px-2.5 py-1 rounded-md text-xs font-medium border ${
-                        p.status === 'activo' 
-                          ? 'bg-slate-100 text-slate-700 border-slate-200' 
-                          : 'bg-red-50 text-red-600 border-red-200'
-                      }`}>
-                        {p.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+                  <span className={`px-2 py-1 rounded-md text-[10px] font-bold border uppercase ${
+                    p.status === 'activo' 
+                      ? 'bg-slate-100 text-slate-600 border-slate-200' 
+                      : 'bg-red-50 text-red-600 border-red-200'
+                  }`}>
+                    {p.status}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
