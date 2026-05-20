@@ -25,7 +25,7 @@ export default async function DashboardIndex() {
     const { count } = await supabase
       .from("loans")
       .select("*", { count: "exact", head: true })
-      .eq("profile_id", user.id)
+      .eq("user_id", user.id)
       .in("status", ["solicitado", "aprobado", "entregado"]);
     activeLoansCount = count || 0;
   }

@@ -40,8 +40,17 @@ export default async function ReadBookPage({ params }: { params: Promise<{ id: s
     );
   }
 
+  interface BookAuthorRelation {
+    author: {
+      full_name: string;
+    } | null;
+  }
+
   // Generar cadena de autores
-  const authorsList = book.authors?.map((a: any) => a.author.full_name).join(", ") || "Autor desconocido";
+  const authorsList = (book.authors as unknown as BookAuthorRelation[])
+    ?.map((a) => a.author?.full_name)
+    .filter(Boolean)
+    .join(", ") || "Autor desconocido";
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-900">

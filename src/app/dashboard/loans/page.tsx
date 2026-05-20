@@ -21,7 +21,7 @@ export default async function LoansPage() {
     .from("loans")
     .select(`
       *,
-      profile:profiles(full_name, id_number),
+      profile:profiles(full_name, cedula),
       copy:physical_copies(
         inventory_code,
         book:books(title)

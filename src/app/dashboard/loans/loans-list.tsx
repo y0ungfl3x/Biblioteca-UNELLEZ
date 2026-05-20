@@ -4,7 +4,31 @@ import { useState } from "react";
 import { Check, X, BookDown, BookUp, Clock, User, Hash, Loader2 } from "lucide-react";
 import { updateLoanStatus } from "@/app/actions/loans";
 
-export function LoansList({ initialLoans }: { initialLoans: any[] }) {
+export interface LoanWithRelations {
+  id: string;
+  user_id: string;
+  copy_id: string;
+  status: string;
+  mode: string;
+  requested_at: string;
+  approved_at?: string | null;
+  delivered_at?: string | null;
+  due_at?: string | null;
+  returned_at?: string | null;
+  notes?: string | null;
+  profile?: {
+    full_name: string;
+    cedula: string;
+  } | null;
+  copy?: {
+    inventory_code: string;
+    book?: {
+      title: string;
+    } | null;
+  } | null;
+}
+
+export function LoansList({ initialLoans }: { initialLoans: LoanWithRelations[] }) {
   const [loans, setLoans] = useState(initialLoans);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
@@ -20,7 +44,7 @@ export function LoansList({ initialLoans }: { initialLoans: any[] }) {
     setLoadingId(null);
   }
 
-  const statusConfig: any = {
+  const statusConfig: Record<string, { label: string; color: string }> = {
     solicitado: { label: "Solicitado", color: "bg-amber-100 text-amber-700 border-amber-200" },
     aprobado: { label: "Aprobado", color: "bg-blue-100 text-blue-700 border-blue-200" },
     entregado: { label: "En Préstamo", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
@@ -52,7 +76,7 @@ export function LoansList({ initialLoans }: { initialLoans: any[] }) {
                     </div>
                     <div>
                       <div className="font-bold text-slate-900">{loan.profile?.full_name}</div>
-                      <div className="text-xs text-slate-500">C.I: {loan.profile?.id_number}</div>
+                      <div className="text-xs text-slate-500">C.I: {loan.profile?.cedula}</div>
                     </div>
                   </div>
                 </td>
@@ -139,7 +163,7 @@ export function LoansList({ initialLoans }: { initialLoans: any[] }) {
                 </div>
                 <div>
                   <div className="font-bold text-slate-900 leading-tight">{loan.profile?.full_name}</div>
-                  <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">C.I: {loan.profile?.id_number}</div>
+                  <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">C.I: {loan.profile?.cedula}</div>
                 </div>
               </div>
               <span className={`inline-flex items-center px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider border ${statusConfig[loan.status]?.color}`}>

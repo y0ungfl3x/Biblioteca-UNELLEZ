@@ -4,6 +4,8 @@ import Link from "next/link";
 import { Clock, Book, Hash, Calendar, ArrowRight, User } from "lucide-react";
 import { clsx } from "clsx";
 
+import React from "react";
+
 export const dynamic = "force-dynamic";
 
 export default async function MyLoansPage() {
@@ -22,10 +24,10 @@ export default async function MyLoansPage() {
         book:books(title, category_id, categories(name))
       )
     `)
-    .eq("profile_id", user.id)
+    .eq("user_id", user.id)
     .order("requested_at", { ascending: false });
 
-  const statusConfig: any = {
+  const statusConfig: Record<string, { label: string; color: string; icon: React.ComponentType<{ className?: string }> }> = {
     solicitado: { label: "Solicitado", color: "bg-amber-100 text-amber-700 border-amber-200", icon: Clock },
     aprobado: { label: "Aprobado para Retiro", color: "bg-blue-100 text-blue-700 border-blue-200", icon: Calendar },
     entregado: { label: "En mis manos", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: Book },

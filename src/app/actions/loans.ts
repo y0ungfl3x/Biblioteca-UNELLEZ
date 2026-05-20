@@ -64,7 +64,18 @@ export async function updateLoanStatus(loanId: string, newStatus: string) {
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   if (profile?.role === "estudiante" || profile?.role === "invitado") return { error: "No autorizado" };
 
-  const updatePayload: any = { status: newStatus };
+  interface UpdateLoanPayload {
+    status: string;
+    approved_at?: string;
+    approved_by?: string;
+    delivered_at?: string;
+    delivered_by?: string;
+    due_at?: string;
+    returned_at?: string;
+    received_by?: string;
+  }
+
+  const updatePayload: UpdateLoanPayload = { status: newStatus };
 
   if (newStatus === "aprobado") {
     updatePayload.approved_at = new Date().toISOString();

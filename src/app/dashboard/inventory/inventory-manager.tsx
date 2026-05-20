@@ -9,8 +9,17 @@ import { addPhysicalCopies, linkEbook } from "@/app/actions/inventory";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
 
+export interface InventoryBook {
+  id: string;
+  code: string | null;
+  title: string;
+  category: string | null;
+  physical_total: number;
+  ebooks_total: number;
+}
+
 interface InventoryManagerProps {
-  books: any[];
+  books: InventoryBook[];
   categories: string[];
   totalCount: number;
   currentPage: number;
@@ -39,7 +48,7 @@ export function InventoryManager({
 
   const totalPages = Math.ceil(totalCount / itemsPerPage);
 
-  const updateFilters = (updates: any) => {
+  const updateFilters = (updates: Record<string, string | number | undefined>) => {
     const params = new URLSearchParams(searchParams.toString());
     Object.entries(updates).forEach(([key, value]) => {
       if (value === "all" || value === "" || (key === "page" && value === 1)) {
@@ -214,7 +223,7 @@ export function InventoryManager({
   );
 }
 
-function BookRow({ book, isExpanded, onToggle }: { book: any, isExpanded: boolean, onToggle: () => void }) {
+function BookRow({ book, isExpanded, onToggle }: { book: InventoryBook, isExpanded: boolean, onToggle: () => void }) {
   const [loadingPhysical, setLoadingPhysical] = useState(false);
   const [loadingEbook, setLoadingEbook] = useState(false);
 
@@ -334,7 +343,7 @@ function BookRow({ book, isExpanded, onToggle }: { book: any, isExpanded: boolea
   );
 }
 
-function MobileBookCard({ book, isExpanded, onToggle }: { book: any, isExpanded: boolean, onToggle: () => void }) {
+function MobileBookCard({ book, isExpanded, onToggle }: { book: InventoryBook, isExpanded: boolean, onToggle: () => void }) {
   const [loadingPhysical, setLoadingPhysical] = useState(false);
   const [loadingEbook, setLoadingEbook] = useState(false);
 
