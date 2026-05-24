@@ -304,7 +304,7 @@ returns public.app_role
 language sql
 stable
 as $$
-  select coalesce((select p.role from public.profiles p where p.id = auth.uid()), 'invitado'::public.app_role)
+  select coalesce((select p.role from public.profiles p where p.id = (select auth.uid())), 'invitado'::public.app_role)
 $$;
 
 create or replace function public.is_staff_or_admin()
@@ -469,18 +469,18 @@ alter table public.audit_log enable row level security;
 drop policy if exists profiles_select on public.profiles;
 create policy profiles_select on public.profiles
 for select
-using (auth.uid() = id or public.is_staff_or_admin());
+using ((select auth.uid()) = id or (select public.is_staff_or_admin()));
 
 drop policy if exists profiles_update on public.profiles;
 create policy profiles_update on public.profiles
 for update
-using (auth.uid() = id or public.is_staff_or_admin())
-with check (auth.uid() = id or public.is_staff_or_admin());
+using ((select auth.uid()) = id or (select public.is_staff_or_admin()))
+with check ((select auth.uid()) = id or (select public.is_staff_or_admin()));
 
 drop policy if exists profiles_insert_admin on public.profiles;
 create policy profiles_insert_admin on public.profiles
 for insert
-with check (public.current_role() = 'administrador');
+with check ((select public.current_role()) = 'administrador');
 
 drop policy if exists categories_read_all on public.categories;
 create policy categories_read_all on public.categories
@@ -490,8 +490,8 @@ using (true);
 drop policy if exists categories_manage_staff on public.categories;
 create policy categories_manage_staff on public.categories
 for all
-using (public.is_staff_or_admin())
-with check (public.is_staff_or_admin());
+using ((select public.is_staff_or_admin()))
+with check ((select public.is_staff_or_admin()));
 
 drop policy if exists authors_read_all on public.authors;
 create policy authors_read_all on public.authors
@@ -501,8 +501,8 @@ using (true);
 drop policy if exists authors_manage_staff on public.authors;
 create policy authors_manage_staff on public.authors
 for all
-using (public.is_staff_or_admin())
-with check (public.is_staff_or_admin());
+using ((select public.is_staff_or_admin()))
+with check ((select public.is_staff_or_admin()));
 
 drop policy if exists books_read_all on public.books;
 create policy books_read_all on public.books
@@ -512,8 +512,8 @@ using (true);
 drop policy if exists books_manage_staff on public.books;
 create policy books_manage_staff on public.books
 for all
-using (public.is_staff_or_admin())
-with check (public.is_staff_or_admin());
+using ((select public.is_staff_or_admin()))
+with check ((select public.is_staff_or_admin()));
 
 drop policy if exists book_authors_read_all on public.book_authors;
 create policy book_authors_read_all on public.book_authors
@@ -523,8 +523,8 @@ using (true);
 drop policy if exists book_authors_manage_staff on public.book_authors;
 create policy book_authors_manage_staff on public.book_authors
 for all
-using (public.is_staff_or_admin())
-with check (public.is_staff_or_admin());
+using ((select public.is_staff_or_admin()))
+with check ((select public.is_staff_or_admin()));
 
 drop policy if exists copies_read_all on public.physical_copies;
 create policy copies_read_all on public.physical_copies
@@ -534,8 +534,8 @@ using (true);
 drop policy if exists copies_manage_staff on public.physical_copies;
 create policy copies_manage_staff on public.physical_copies
 for all
-using (public.is_staff_or_admin())
-with check (public.is_staff_or_admin());
+using ((select public.is_staff_or_admin()))
+with check ((select public.is_staff_or_admin()));
 
 drop policy if exists ebooks_read_policy on public.ebooks;
 create policy ebooks_read_policy on public.ebooks
@@ -543,16 +543,16 @@ for select
 using (
   is_active and (
     access_level = 'publico'
-    or (auth.uid() is not null and access_level = 'comunidad')
-    or public.is_staff_or_admin()
+    or ((select auth.uid()) is not null and access_level = 'comunidad')
+    or (select public.is_staff_or_admin())
   )
 );
 
 drop policy if exists ebooks_manage_staff on public.ebooks;
 create policy ebooks_manage_staff on public.ebooks
 for all
-using (public.is_staff_or_admin())
-with check (public.is_staff_or_admin());
+using ((select public.is_staff_or_admin()))
+with check ((select public.is_staff_or_admin()));
 
 drop policy if exists params_read_all on public.loan_parameters;
 create policy params_read_all on public.loan_parameters
@@ -568,53 +568,53 @@ with check (public.current_role() = 'administrador');
 drop policy if exists loans_read_policy on public.loans;
 create policy loans_read_policy on public.loans
 for select
-using (auth.uid() = user_id or public.is_staff_or_admin());
+using ((select auth.uid()) = user_id or (select public.is_staff_or_admin()));
 
 drop policy if exists loans_insert_student on public.loans;
 create policy loans_insert_student on public.loans
 for insert
 with check (
-  auth.uid() = user_id
-  and public.current_role() = 'estudiante'
+  (select auth.uid()) = user_id
+  and (select public.current_role()) = 'estudiante'
   and status = 'solicitado'
 );
 
 drop policy if exists loans_update_staff on public.loans;
 create policy loans_update_staff on public.loans
 for update
-using (public.is_staff_or_admin())
-with check (public.is_staff_or_admin());
+using ((select public.is_staff_or_admin()))
+with check ((select public.is_staff_or_admin()));
 
 drop policy if exists reservations_read_policy on public.reservations;
 create policy reservations_read_policy on public.reservations
 for select
-using (auth.uid() = user_id or public.is_staff_or_admin());
+using ((select auth.uid()) = user_id or (select public.is_staff_or_admin()));
 
 drop policy if exists reservations_insert_student on public.reservations;
 create policy reservations_insert_student on public.reservations
 for insert
 with check (
-  auth.uid() = user_id
-  and public.current_role() = 'estudiante'
+  (select auth.uid()) = user_id
+  and (select public.current_role()) = 'estudiante'
   and status = 'activa'
 );
 
 drop policy if exists reservations_update_policy on public.reservations;
 create policy reservations_update_policy on public.reservations
 for update
-using (auth.uid() = user_id or public.is_staff_or_admin())
-with check (auth.uid() = user_id or public.is_staff_or_admin());
+using ((select auth.uid()) = user_id or (select public.is_staff_or_admin()))
+with check ((select auth.uid()) = user_id or (select public.is_staff_or_admin()));
 
 drop policy if exists fines_read_policy on public.fines;
 create policy fines_read_policy on public.fines
 for select
-using (auth.uid() = user_id or public.is_staff_or_admin());
+using ((select auth.uid()) = user_id or (select public.is_staff_or_admin()));
 
 drop policy if exists fines_manage_staff on public.fines;
 create policy fines_manage_staff on public.fines
 for all
-using (public.is_staff_or_admin())
-with check (public.is_staff_or_admin());
+using ((select public.is_staff_or_admin()))
+with check ((select public.is_staff_or_admin()));
 
 drop policy if exists ebook_reads_insert_open on public.ebook_reads;
 create policy ebook_reads_insert_open on public.ebook_reads
@@ -624,30 +624,30 @@ with check (true);
 drop policy if exists ebook_reads_select_policy on public.ebook_reads;
 create policy ebook_reads_select_policy on public.ebook_reads
 for select
-using (auth.uid() = user_id or public.is_staff_or_admin());
+using ((select auth.uid()) = user_id or (select public.is_staff_or_admin()));
 
 drop policy if exists notifications_read_policy on public.notifications;
 create policy notifications_read_policy on public.notifications
 for select
-using (auth.uid() = user_id or public.is_staff_or_admin());
+using ((select auth.uid()) = user_id or (select public.is_staff_or_admin()));
 
 drop policy if exists notifications_manage_staff on public.notifications;
 create policy notifications_manage_staff on public.notifications
 for all
-using (public.is_staff_or_admin())
-with check (public.is_staff_or_admin());
+using ((select public.is_staff_or_admin()))
+with check ((select public.is_staff_or_admin()));
 
 drop policy if exists audit_read_staff on public.audit_log;
 create policy audit_read_staff on public.audit_log
 for select
-using (public.is_staff_or_admin());
+using ((select public.is_staff_or_admin()));
 
 drop policy if exists audit_insert_service_or_staff on public.audit_log;
 create policy audit_insert_service_or_staff on public.audit_log
 for insert
 with check (
-  public.is_staff_or_admin()
-  or auth.role() = 'service_role'
+  (select public.is_staff_or_admin())
+  or (select auth.role()) = 'service_role'
 );
 
 create or replace view public.catalog_view as

@@ -1,6 +1,6 @@
 drop view if exists public.catalog_view;
 
-create view public.catalog_view as
+create view public.catalog_view with (security_invoker = true) as
 select
   b.id,
   b.code,
