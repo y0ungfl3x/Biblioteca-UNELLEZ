@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { login } from "@/app/actions/auth";
 import { useRouter } from "next/navigation";
-import { BookOpen, Lock, Mail, AlertCircle, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { BookOpen, Lock, Mail, AlertCircle, Loader2, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function LoginPage() {
@@ -40,6 +41,16 @@ export default function LoginPage() {
         className="w-full max-w-md bg-white/90 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-2xl overflow-hidden relative z-10"
       >
         <div className="p-8">
+          <div className="mb-6">
+            <Link 
+              href="/" 
+              className="inline-flex items-center space-x-2 text-sm font-semibold text-slate-500 hover:text-orange-600 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Volver al Catálogo</span>
+            </Link>
+          </div>
+
           <div className="flex flex-col items-center justify-center space-y-4 mb-8">
             <img src="/logo.png" alt="UNELLEZ" className="h-24 w-auto object-contain" />
             <div className="text-center">

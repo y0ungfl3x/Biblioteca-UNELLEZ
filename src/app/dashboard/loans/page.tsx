@@ -17,17 +17,21 @@ export default async function LoansPage() {
   }
 
   // Obtener préstamos pendientes y activos
-  const { data: loans } = await supabase
+  const { data: loans, error: loansError } = await supabase
     .from("loans")
     .select(`
       *,
-      profile:profiles(full_name, cedula),
+      profile:profiles!loans_user_id_fkey(full_name, cedula),
       copy:physical_copies(
         inventory_code,
         book:books(title)
       )
     `)
     .order("requested_at", { ascending: false });
+
+  if (loansError) {
+    console.error("Error fetching loans:", loansError);
+  }
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 relative z-10">
