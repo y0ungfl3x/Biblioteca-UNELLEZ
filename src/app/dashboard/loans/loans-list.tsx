@@ -5,6 +5,7 @@ import { Check, X, BookDown, BookUp, Clock, User, Hash, Loader2, AlertTriangle, 
 import { updateLoanStatus } from "@/app/actions/loans";
 import { createClient } from "@/lib/supabase/client";
 import { clsx } from "clsx";
+import { toast } from "sonner";
 
 export interface LoanWithRelations {
   id: string;
@@ -95,8 +96,9 @@ export function LoansList({ initialLoans }: { initialLoans: LoanWithRelations[] 
     setLoadingId(loan.id);
     const res = await updateLoanStatus(loan.id, status);
     if (res.error) {
-      alert(res.error);
+      toast.error(res.error);
     } else {
+      toast.success("Estado actualizado con éxito.");
       // Refrescar la lista inmediatamente después de la acción
       await fetchLoans();
     }

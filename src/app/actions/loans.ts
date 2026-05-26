@@ -29,6 +29,21 @@ export async function requestLoan(bookId: string) {
     return { error: `Has alcanzado el límite máximo de préstamos activos (${maxLoans})` };
   }
 
+  // Verificar si ya tiene un préstamo activo o solicitud para este mismo libro
+  const { data: existingLoans, error: existingError } = await supabase
+    .from("loans")
+    .select(`
+      id,
+      copy:physical_copies!inner(book_id)
+    `)
+    .eq("user_id", user.id)
+    .in("status", ["solicitado", "aprobado", "entregado", "vencido", "multado"])
+    .eq("copy.book_id", bookId);
+
+  if (existingLoans && existingLoans.length > 0) {
+    return { error: "Ya tienes un préstamo o solicitud activa para este libro." };
+  }
+
   // Buscar una copia disponible
   const { data: copy, error: copyError } = await supabase
     .from("physical_copies")
