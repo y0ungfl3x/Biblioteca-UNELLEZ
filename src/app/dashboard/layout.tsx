@@ -33,9 +33,9 @@ export default async function DashboardLayout({
           <span className="font-bold text-slate-900 tracking-tight">Biblioteca</span>
         </div>
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+          <Link href="/dashboard/profile" className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-orange-50 hover:text-orange-600 transition-all border border-slate-100" title="Ver Perfil">
             <UserIcon className="w-4 h-4" />
-          </div>
+          </Link>
           <form action={logout}>
             <button type="submit" className="p-2 text-slate-400 hover:text-red-600 transition-colors">
               <LogOut className="w-5 h-5" />

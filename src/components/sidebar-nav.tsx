@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Users, LayoutDashboard, HandHelping } from "lucide-react";
+import { BookOpen, Users, LayoutDashboard, HandHelping, User } from "lucide-react";
 import { clsx } from "clsx";
 
 export function SidebarNav({ role }: { role: string }) {
@@ -15,10 +15,12 @@ export function SidebarNav({ role }: { role: string }) {
     { href: "/dashboard/inventory", label: "Inventario", icon: BookOpen },
     { href: "/dashboard/loans", label: "Préstamos", icon: HandHelping },
     { href: "/dashboard/users", label: "Usuarios", icon: Users },
+    { href: "/dashboard/profile", label: "Mi Perfil", icon: User },
   ] : [
     { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
     { href: "/dashboard/explorer", label: "Explorar Libros", icon: BookOpen },
     { href: "/dashboard/my-loans", label: "Mis Préstamos", icon: HandHelping },
+    { href: "/dashboard/profile", label: "Mi Perfil", icon: User },
   ];
 
   return (

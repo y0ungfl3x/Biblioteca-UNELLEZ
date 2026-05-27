@@ -63,6 +63,7 @@ export async function createSystemUser(formData: FormData) {
   const password = formData.get("password") as string;
   const cedula = formData.get("cedula") as string;
   const fullName = formData.get("full_name") as string;
+  const phone = formData.get("phone") as string;
 
   const adminClient = createAdminClient();
   
@@ -81,6 +82,13 @@ export async function createSystemUser(formData: FormData) {
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (phone) {
+    await adminClient
+      .from("profiles")
+      .update({ phone })
+      .eq("id", data.user.id);
   }
 
   return { success: true, userId: data.user.id };

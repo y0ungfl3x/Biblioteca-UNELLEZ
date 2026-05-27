@@ -58,6 +58,11 @@ export function CreateUserForm({ currentRole }: { currentRole?: string }) {
       </div>
 
       <div className="space-y-1">
+        <label className="block text-xs font-bold text-slate-700 ml-1">Teléfono</label>
+        <input name="phone" placeholder="Ej: +58 412-1234567" className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 outline-none transition-all shadow-sm" />
+      </div>
+
+      <div className="space-y-1">
         <label className="block text-xs font-bold text-slate-700 ml-1">Correo Electrónico</label>
         <input name="email" type="email" required className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 outline-none transition-all shadow-sm" />
       </div>
