@@ -2,9 +2,17 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Clock, Book, Hash, Calendar, ArrowRight, AlertTriangle } from "lucide-react";
+import {
+  Clock,
+  Book,
+  Hash,
+  Calendar,
+  ArrowRight,
+  AlertTriangle,
+} from "lucide-react";
 import { clsx } from "clsx";
 import { RenewButton } from "@/components/renew-button";
+import { LoanReceipt } from "@/components/loan-receipt";
 import { createClient } from "@/lib/supabase/client";
 import React from "react";
 
@@ -20,30 +28,77 @@ interface Loan {
   due_at?: string | null;
   returned_at?: string | null;
   notes?: string | null;
-  copy?: {
+  copy: {
     inventory_code: string;
-    book?: {
+    location: string;
+    book: {
       title: string;
+      code?: string | null;
+      category?: {
+        name: string;
+      } | null;
     } | null;
+  } | null;
+  profile?: {
+    full_name: string;
+    cedula: string;
+    email?: string | null;
+    phone?: string | null;
   } | null;
 }
 
 interface Profile {
   status: string;
   suspended_until?: string | null;
+  full_name?: string | null;
+  cedula?: string | null;
+  email?: string | null;
+  phone?: string | null;
 }
 
 const statusConfig: Record<
   string,
-  { label: string; color: string; icon: React.ComponentType<{ className?: string }> }
+  {
+    label: string;
+    color: string;
+    icon: React.ComponentType<{ className?: string }>;
+  }
 > = {
-  solicitado: { label: "Solicitado", color: "bg-amber-100 text-amber-700 border-amber-200", icon: Clock },
-  aprobado: { label: "Aprobado para Retiro", color: "bg-blue-100 text-blue-700 border-blue-200", icon: Calendar },
-  entregado: { label: "En mis manos", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: Book },
-  devuelto: { label: "Devuelto", color: "bg-slate-100 text-slate-500 border-slate-200", icon: ArrowRight },
-  rechazado: { label: "Rechazado", color: "bg-rose-100 text-rose-700 border-rose-200", icon: ArrowRight },
-  vencido: { label: "Vencido", color: "bg-rose-100 text-rose-800 border-rose-300", icon: Clock },
-  multado: { label: "Multado", color: "bg-purple-100 text-purple-800 border-purple-300", icon: AlertTriangle },
+  solicitado: {
+    label: "Solicitado",
+    color: "bg-amber-100 text-amber-700 border-amber-200",
+    icon: Clock,
+  },
+  aprobado: {
+    label: "Aprobado para Retiro",
+    color: "bg-blue-100 text-blue-700 border-blue-200",
+    icon: Calendar,
+  },
+  entregado: {
+    label: "En mis manos",
+    color: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    icon: Book,
+  },
+  devuelto: {
+    label: "Devuelto",
+    color: "bg-slate-100 text-slate-500 border-slate-200",
+    icon: ArrowRight,
+  },
+  rechazado: {
+    label: "Rechazado",
+    color: "bg-rose-100 text-rose-700 border-rose-200",
+    icon: ArrowRight,
+  },
+  vencido: {
+    label: "Vencido",
+    color: "bg-rose-100 text-rose-800 border-rose-300",
+    icon: Clock,
+  },
+  multado: {
+    label: "Multado",
+    color: "bg-purple-100 text-purple-800 border-purple-300",
+    icon: AlertTriangle,
+  },
 };
 
 export function MyLoansClient({
@@ -57,10 +112,12 @@ export function MyLoansClient({
 }) {
   const [loans, setLoans] = useState(initialLoans);
   const [profile, setProfile] = useState(initialProfile);
+  const [selectedLoanId, setSelectedLoanId] = useState<string | null>(null);
 
   const isSuspended =
     profile?.status === "bloqueado" ||
-    (profile?.suspended_until && new Date() < new Date(profile.suspended_until));
+    (profile?.suspended_until &&
+      new Date() < new Date(profile.suspended_until));
 
   const fetchData = useCallback(async () => {
     const supabase = createClient();
@@ -68,33 +125,34 @@ export function MyLoansClient({
     const [loansRes, profileRes] = await Promise.all([
       supabase
         .from("loans")
-        .select(`
+        .select(
+          `
           *,
           copy:physical_copies(
             inventory_code,
-            book:books(title)
+            location,
+            book:books(title, code, category:categories(name))
           )
-        `)
+        `,
+        )
         .eq("user_id", userId)
         .order("requested_at", { ascending: false }),
       supabase
         .from("profiles")
-        .select("status, suspended_until")
+        .select("status, suspended_until, full_name, cedula, email, phone")
         .eq("id", userId)
         .single(),
     ]);
 
-    if (loansRes.data) setLoans(loansRes.data as Loan[]);
+    if (loansRes.data) setLoans(loansRes.data as unknown as Loan[]);
     if (profileRes.data) setProfile(profileRes.data as Profile);
   }, [userId]);
 
   useEffect(() => {
     const supabase = createClient();
 
-    // Polling cada 5 segundos como respaldo confiable
     const interval = setInterval(fetchData, 5000);
 
-    // Realtime como canal instantáneo (si está habilitado en Supabase)
     const loansChannel = supabase
       .channel("student-loans-realtime")
       .on(
@@ -107,7 +165,7 @@ export function MyLoansClient({
         },
         () => {
           fetchData();
-        }
+        },
       )
       .subscribe();
 
@@ -123,7 +181,7 @@ export function MyLoansClient({
         },
         () => {
           fetchData();
-        }
+        },
       )
       .subscribe();
 
@@ -134,11 +192,34 @@ export function MyLoansClient({
     };
   }, [userId, fetchData]);
 
+  const selectedLoan =
+    loans.find((loan) => loan.id === selectedLoanId) ?? null;
+
+  const receiptLoan = selectedLoan
+    ? {
+        ...selectedLoan,
+        profile:
+          selectedLoan.profile ??
+          (profile
+            ? {
+                full_name: profile.full_name ?? "",
+                cedula: profile.cedula ?? "",
+                email: profile.email ?? null,
+                phone: profile.phone ?? null,
+              }
+            : null),
+      }
+    : null;
+
   return (
     <div className="p-6 md:p-8 space-y-8 max-w-5xl mx-auto relative z-10">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Mis Préstamos</h1>
-        <p className="text-slate-500 mt-1">Sigue el estado de tus solicitudes y libros pendientes por devolver.</p>
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+          Mis Préstamos
+        </h1>
+        <p className="text-slate-500 mt-1">
+          Sigue el estado de tus solicitudes y libros pendientes por devolver.
+        </p>
       </div>
 
       {isSuspended && (
@@ -149,7 +230,8 @@ export function MyLoansClient({
           <div>
             <h3 className="font-bold text-rose-800">Cuenta Suspendida</h3>
             <p className="text-sm text-rose-600 mt-1">
-              Tienes una sanción activa por entrega tardía. No podrás solicitar ni renovar préstamos hasta el{" "}
+              Tienes una sanción activa por entrega tardía. No podrás solicitar
+              ni renovar préstamos hasta el{" "}
               <strong>
                 {profile?.suspended_until
                   ? new Date(profile.suspended_until).toLocaleDateString()
@@ -173,14 +255,15 @@ export function MyLoansClient({
           return (
             <div
               key={loan.id}
-              className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm hover:shadow-md transition-shadow"
+              onClick={() => setSelectedLoanId(loan.id)}
+              className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm hover:shadow-md transition-all cursor-pointer group hover:border-orange-200"
             >
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="flex items-start gap-4">
                   <div
                     className={clsx(
-                      "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border",
-                      config.color
+                      "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border transition-transform group-hover:scale-110",
+                      config.color,
                     )}
                   >
                     <StatusIcon className="w-6 h-6" />
@@ -190,7 +273,7 @@ export function MyLoansClient({
                       <span
                         className={clsx(
                           "px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider border",
-                          config.color
+                          config.color,
                         )}
                       >
                         {config.label}
@@ -199,8 +282,8 @@ export function MyLoansClient({
                         Ref: {loan.id.slice(0, 8)}
                       </span>
                     </div>
-                    <h3 className="font-bold text-slate-900 text-lg">
-                      {loan.copy?.book?.title}
+                    <h3 className="font-bold text-slate-900 text-lg group-hover:text-orange-600 transition-colors">
+                      {loan.copy?.book?.title || "Libro no especificado"}
                     </h3>
                     <div className="flex items-center gap-4 mt-2">
                       <div className="flex items-center text-xs text-slate-500 font-medium">
@@ -209,7 +292,8 @@ export function MyLoansClient({
                       </div>
                       <div className="flex items-center text-xs text-slate-500 font-medium">
                         <Calendar className="w-3.5 h-3.5 mr-1 text-slate-400" />
-                        Pedida: {new Date(loan.requested_at).toLocaleDateString()}
+                        Solicitado:{" "}
+                        {new Date(loan.requested_at).toLocaleDateString()}
                       </div>
                     </div>
                   </div>
@@ -217,7 +301,10 @@ export function MyLoansClient({
 
                 <div className="flex flex-col md:items-end gap-3 pt-4 md:pt-0 border-t md:border-t-0 border-slate-100">
                   {loan.status === "entregado" && loan.due_at && (
-                    <div className="flex flex-col md:items-end w-full">
+                    <div
+                      className="flex flex-col md:items-end w-full"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-1">
                         Fecha de Devolución
                       </span>
@@ -241,10 +328,14 @@ export function MyLoansClient({
                   )}
 
                   {loan.status === "solicitado" && (
-                    <div className="text-slate-400 text-xs font-medium italic">
-                      Esperando aprobación del bibliotecario...
+                    <div className="text-slate-400 text-[10px] font-bold uppercase tracking-widest italic">
+                      Esperando aprobación...
                     </div>
                   )}
+
+                  <div className="p-2 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-orange-50 group-hover:text-orange-500 transition-colors self-end">
+                    <ArrowRight className="w-5 h-5" />
+                  </div>
                 </div>
               </div>
             </div>
@@ -256,7 +347,9 @@ export function MyLoansClient({
             <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
               <Book className="w-8 h-8 text-slate-300" />
             </div>
-            <h3 className="text-lg font-bold text-slate-900">Aún no has pedido libros</h3>
+            <h3 className="text-lg font-bold text-slate-900">
+              Aún no has pedido libros
+            </h3>
             <p className="text-slate-500 text-sm mt-1 max-w-xs mx-auto">
               Explora el catálogo y solicita tu primer préstamo físico.
             </p>
@@ -269,6 +362,13 @@ export function MyLoansClient({
           </div>
         )}
       </div>
+
+      {receiptLoan && (
+        <LoanReceipt
+          loan={receiptLoan}
+          onClose={() => setSelectedLoanId(null)}
+        />
+      )}
     </div>
   );
 }

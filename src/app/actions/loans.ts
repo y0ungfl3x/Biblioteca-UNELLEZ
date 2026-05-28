@@ -5,85 +5,50 @@ import { revalidatePath } from "next/cache";
 
 export async function requestLoan(bookId: string) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) return { error: "Debes iniciar sesión para solicitar un préstamo" };
-
-  // Obtener parámetros globales (límites)
-  const { data: params } = await supabase
-    .from("loan_parameters")
-    .select("max_active_loans")
-    .eq("id", 1)
-    .single();
-
-  const maxLoans = params?.max_active_loans || 3;
-
-  // Verificar si ya tiene préstamos activos o solicitudes pendientes
-  const { count: activeLoans } = await supabase
-    .from("loans")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .in("status", ["solicitado", "aprobado", "entregado", "vencido", "multado"]);
-
-  if (activeLoans !== null && activeLoans >= maxLoans) {
-    return { error: `Has alcanzado el límite máximo de préstamos activos (${maxLoans})` };
-  }
-
-  // Verificar si ya tiene un préstamo activo o solicitud para este mismo libro
-  const { data: existingLoans, error: existingError } = await supabase
-    .from("loans")
-    .select(`
-      id,
-      copy:physical_copies!inner(book_id)
-    `)
-    .eq("user_id", user.id)
-    .in("status", ["solicitado", "aprobado", "entregado", "vencido", "multado"])
-    .eq("copy.book_id", bookId);
-
-  if (existingLoans && existingLoans.length > 0) {
-    return { error: "Ya tienes un préstamo o solicitud activa para este libro." };
-  }
-
-  // Buscar una copia disponible
-  const { data: copy, error: copyError } = await supabase
-    .from("physical_copies")
-    .select("id")
-    .eq("book_id", bookId)
-    .eq("status", "disponible")
-    .limit(1)
-    .maybeSingle();
-
-  if (copyError || !copy) {
-    return { error: "No hay copias físicas disponibles en este momento" };
-  }
-
-  // Crear la solicitud de préstamo
-  const { error: loanError } = await supabase.from("loans").insert({
-    user_id: user.id,
-    copy_id: copy.id,
-    status: "solicitado",
-    mode: "externa"
+  // Usar el RPC atómico para evitar condiciones de carrera
+  const { data, error: rpcError } = await supabase.rpc("rpc_request_loan", {
+    p_book_id: bookId,
   });
 
-  if (loanError) {
-    console.error("Error al solicitar préstamo:", loanError);
-    return { error: loanError.message || "No se pudo procesar la solicitud" };
+  if (rpcError) {
+    console.error("Error al llamar rpc_request_loan:", rpcError);
+    return { error: "Error interno del servidor al procesar la solicitud" };
+  }
+
+  const result = data as {
+    error?: string;
+    success?: boolean;
+    message?: string;
+  };
+
+  if (result.error) {
+    return { error: result.error };
   }
 
   revalidatePath("/");
   revalidatePath("/dashboard/loans");
   revalidatePath("/dashboard/my-loans");
-  
-  return { success: "¡Solicitud de préstamo enviada con éxito!" };
+
+  return {
+    success: result.message || "¡Solicitud de préstamo enviada con éxito!",
+  };
 }
 
 export async function updateLoanStatus(loanId: string, newStatus: string) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return { error: "No autorizado" };
 
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-  if (profile?.role === "estudiante" || profile?.role === "invitado") return { error: "No autorizado" };
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (profile?.role === "estudiante" || profile?.role === "invitado")
+    return { error: "No autorizado" };
 
   // Obtener los datos del préstamo actual antes de actualizar
   const { data: currentLoan, error: fetchError } = await supabase
@@ -115,19 +80,18 @@ export async function updateLoanStatus(loanId: string, newStatus: string) {
   } else if (newStatus === "entregado") {
     updatePayload.delivered_at = new Date().toISOString();
     updatePayload.delivered_by = user.id;
-    
+
     // Obtener la cantidad de días permitidos desde los parámetros
     const { data: params } = await supabase
       .from("loan_parameters")
       .select("loan_days")
       .eq("id", 1)
       .single();
-    
+
     const loanDays = params?.loan_days || 3;
     const dueAt = new Date();
     dueAt.setDate(dueAt.getDate() + loanDays);
     updatePayload.due_at = dueAt.toISOString();
-    
   } else if (newStatus === "devuelto") {
     const returnedAt = new Date();
     updatePayload.returned_at = returnedAt.toISOString();
@@ -149,7 +113,7 @@ export async function updateLoanStatus(loanId: string, newStatus: string) {
           .from("profiles")
           .update({
             status: "bloqueado",
-            suspended_until: suspendedUntil.toISOString()
+            suspended_until: suspendedUntil.toISOString(),
           })
           .eq("id", currentLoan.user_id);
 
@@ -169,13 +133,19 @@ export async function updateLoanStatus(loanId: string, newStatus: string) {
           entity_id: currentLoan.user_id,
           reason: `Entrega tardía de libro por ${diffDays} días. Suspensión de 1 mes hasta ${suspendedUntil.toLocaleDateString()}.`,
           before_data: { status: "activo", suspended_until: null },
-          after_data: { status: "bloqueado", suspended_until: suspendedUntil.toISOString() }
+          after_data: {
+            status: "bloqueado",
+            suspended_until: suspendedUntil.toISOString(),
+          },
         });
       }
     }
   }
 
-  const { error } = await supabase.from("loans").update(updatePayload).eq("id", loanId);
+  const { error } = await supabase
+    .from("loans")
+    .update(updatePayload)
+    .eq("id", loanId);
 
   if (error) return { error: "Error al actualizar el estado" };
 
@@ -187,7 +157,9 @@ export async function updateLoanStatus(loanId: string, newStatus: string) {
 
 export async function renewLoan(loanId: string) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) return { error: "Debes iniciar sesión para renovar un préstamo" };
 
@@ -200,7 +172,8 @@ export async function renewLoan(loanId: string) {
 
   if (loanError || !loan) return { error: "Préstamo no encontrado" };
   if (loan.user_id !== user.id) return { error: "No autorizado" };
-  if (loan.status !== "entregado") return { error: "Solo puedes renovar préstamos activos (entregados)" };
+  if (loan.status !== "entregado")
+    return { error: "Solo puedes renovar préstamos activos (entregados)" };
 
   // 2. Verificar estado del perfil del usuario (sanciones activas)
   const { data: profile, error: profileError } = await supabase
@@ -209,14 +182,18 @@ export async function renewLoan(loanId: string) {
     .eq("id", user.id)
     .single();
 
-  if (profileError) return { error: "Error al verificar el perfil del usuario" };
+  if (profileError)
+    return { error: "Error al verificar el perfil del usuario" };
 
-  const isSuspended = 
-    profile.status === "bloqueado" || 
+  const isSuspended =
+    profile.status === "bloqueado" ||
     (profile.suspended_until && new Date() < new Date(profile.suspended_until));
 
   if (isSuspended) {
-    return { error: "No puedes renovar libros porque tienes una sanción activa en tu cuenta." };
+    return {
+      error:
+        "No puedes renovar libros porque tienes una sanción activa en tu cuenta.",
+    };
   }
 
   // 3. Verificar si el libro tiene reservas activas
@@ -228,7 +205,10 @@ export async function renewLoan(loanId: string) {
       .eq("status", "activa");
 
     if (reservationsCount && reservationsCount > 0) {
-      return { error: "No puedes renovar este libro porque tiene reservas pendientes de otros estudiantes." };
+      return {
+        error:
+          "No puedes renovar este libro porque tiene reservas pendientes de otros estudiantes.",
+      };
     }
   }
 
@@ -250,7 +230,7 @@ export async function renewLoan(loanId: string) {
     action: "renovacion_prestamo",
     entity: "loans",
     entity_id: loanId,
-    reason: `Renovación por 3 días. Nueva fecha de vencimiento: ${currentDueAt.toLocaleDateString()}`
+    reason: `Renovación por 3 días. Nueva fecha de vencimiento: ${currentDueAt.toLocaleDateString()}`,
   });
 
   revalidatePath("/dashboard/my-loans");

@@ -1,8 +1,20 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Check, X, BookDown, BookUp, Clock, User, Hash, Loader2, AlertTriangle, RefreshCw } from "lucide-react";
+import {
+  Check,
+  X,
+  BookDown,
+  BookUp,
+  Clock,
+  User,
+  Hash,
+  Loader2,
+  AlertTriangle,
+  RefreshCw,
+} from "lucide-react";
 import { updateLoanStatus } from "@/app/actions/loans";
+import { LoanReceipt } from "@/components/loan-receipt";
 import { createClient } from "@/lib/supabase/client";
 import { clsx } from "clsx";
 import { toast } from "sonner";
@@ -19,39 +31,56 @@ export interface LoanWithRelations {
   due_at?: string | null;
   returned_at?: string | null;
   notes?: string | null;
-  profile?: {
+  profile: {
     full_name: string;
     cedula: string;
+    email?: string | null;
+    phone?: string | null;
   } | null;
-  copy?: {
+  copy: {
     inventory_code: string;
-    book?: {
+    location: string;
+    book: {
       title: string;
+      code?: string | null;
+      category?: {
+        name: string;
+      } | null;
     } | null;
   } | null;
 }
 
-export function LoansList({ initialLoans }: { initialLoans: LoanWithRelations[] }) {
+export function LoansList({
+  initialLoans,
+}: {
+  initialLoans: LoanWithRelations[];
+}) {
   const [loans, setLoans] = useState(initialLoans);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [liveIndicator, setLiveIndicator] = useState(false);
+  const [selectedLoan, setSelectedLoan] = useState<LoanWithRelations | null>(
+    null,
+  );
 
   const fetchLoans = useCallback(async () => {
     const supabase = createClient();
     const { data } = await supabase
       .from("loans")
-      .select(`
+      .select(
+        `
         *,
-        profile:profiles!loans_user_id_fkey(full_name, cedula),
+        profile:profiles!loans_user_id_fkey(*),
         copy:physical_copies(
           inventory_code,
-          book:books(title)
+          location,
+          book:books(title, code, category:categories(name))
         )
-      `)
+      `,
+      )
       .order("requested_at", { ascending: false });
 
     if (data) {
-      setLoans(data as LoanWithRelations[]);
+      setLoans(data as unknown as LoanWithRelations[]);
       // Pulso visual de "recibido dato en tiempo real"
       setLiveIndicator(true);
       setTimeout(() => setLiveIndicator(false), 1500);
@@ -72,7 +101,7 @@ export function LoansList({ initialLoans }: { initialLoans: LoanWithRelations[] 
         { event: "*", schema: "public", table: "loans" },
         () => {
           fetchLoans();
-        }
+        },
       )
       .subscribe();
 
@@ -87,7 +116,7 @@ export function LoansList({ initialLoans }: { initialLoans: LoanWithRelations[] 
       const dueAtDate = new Date(loan.due_at);
       if (new Date() > dueAtDate) {
         const confirm = window.confirm(
-          "¡ATENCIÓN!\n\nEste libro se está devolviendo fuera de la fecha de vencimiento.\n\nAl procesarlo, el sistema automáticamente:\n1. Cambiará el estado del préstamo a 'Vencido'.\n2. Sancionará al estudiante con 1 mes de suspensión.\n3. Bloqueará su cuenta.\n\n¿Deseas continuar con la recepción?"
+          "¡ATENCIÓN!\n\nEste libro se está devolviendo fuera de la fecha de vencimiento.\n\nAl procesarlo, el sistema automáticamente:\n1. Cambiará el estado del préstamo a 'Vencido'.\n2. Sancionará al estudiante con 1 mes de suspensión.\n3. Bloqueará su cuenta.\n\n¿Deseas continuar con la recepción?",
         );
         if (!confirm) return;
       }
@@ -106,28 +135,55 @@ export function LoansList({ initialLoans }: { initialLoans: LoanWithRelations[] 
   }
 
   const statusConfig: Record<string, { label: string; color: string }> = {
-    solicitado: { label: "Solicitado", color: "bg-amber-100 text-amber-700 border-amber-200" },
-    aprobado: { label: "Aprobado", color: "bg-blue-100 text-blue-700 border-blue-200" },
-    entregado: { label: "En Préstamo", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-    devuelto: { label: "Devuelto", color: "bg-slate-100 text-slate-600 border-slate-200" },
-    rechazado: { label: "Rechazado", color: "bg-rose-100 text-rose-700 border-rose-200" },
-    vencido: { label: "Vencido", color: "bg-rose-100 text-rose-800 border-rose-300" },
-    multado: { label: "Multado", color: "bg-purple-100 text-purple-800 border-purple-300" },
+    solicitado: {
+      label: "Solicitado",
+      color: "bg-amber-100 text-amber-700 border-amber-200",
+    },
+    aprobado: {
+      label: "Aprobado",
+      color: "bg-blue-100 text-blue-700 border-blue-200",
+    },
+    entregado: {
+      label: "En Préstamo",
+      color: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    },
+    devuelto: {
+      label: "Devuelto",
+      color: "bg-slate-100 text-slate-600 border-slate-200",
+    },
+    rechazado: {
+      label: "Rechazado",
+      color: "bg-rose-100 text-rose-700 border-rose-200",
+    },
+    vencido: {
+      label: "Vencido",
+      color: "bg-rose-100 text-rose-800 border-rose-300",
+    },
+    multado: {
+      label: "Multado",
+      color: "bg-purple-100 text-purple-800 border-purple-300",
+    },
   };
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
       {/* Indicador Realtime */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-slate-100 bg-slate-50/50">
-        <span className="text-xs text-slate-400 font-medium">Actualizaciones en tiempo real</span>
-        <span className={clsx(
-          "flex items-center gap-1.5 text-xs font-semibold transition-all duration-500",
-          liveIndicator ? "text-emerald-600" : "text-slate-400"
-        )}>
-          <span className={clsx(
-            "w-2 h-2 rounded-full transition-colors duration-500",
-            liveIndicator ? "bg-emerald-500 animate-pulse" : "bg-slate-300"
-          )} />
+        <span className="text-xs text-slate-400 font-medium">
+          Actualizaciones en tiempo real
+        </span>
+        <span
+          className={clsx(
+            "flex items-center gap-1.5 text-xs font-semibold transition-all duration-500",
+            liveIndicator ? "text-emerald-600" : "text-slate-400",
+          )}
+        >
+          <span
+            className={clsx(
+              "w-2 h-2 rounded-full transition-colors duration-500",
+              liveIndicator ? "bg-emerald-500 animate-pulse" : "bg-slate-300",
+            )}
+          />
           {liveIndicator ? "Actualizado" : "Conectado"}
         </span>
       </div>
@@ -150,8 +206,10 @@ export function LoansList({ initialLoans }: { initialLoans: LoanWithRelations[] 
                 loan.status === "entregado" &&
                 loan.due_at &&
                 new Date() > new Date(loan.due_at);
-              const config =
-                statusConfig[loan.status] || { label: loan.status, color: "bg-gray-100" };
+              const config = statusConfig[loan.status] || {
+                label: loan.status,
+                color: "bg-gray-100",
+              };
 
               return (
                 <tr
@@ -160,16 +218,19 @@ export function LoansList({ initialLoans }: { initialLoans: LoanWithRelations[] 
                     "transition-colors",
                     isLate
                       ? "bg-rose-50/30 hover:bg-rose-50/50"
-                      : "hover:bg-slate-50/50"
+                      : "hover:bg-slate-50/50",
                   )}
                 >
-                  <td className="px-6 py-4">
+                  <td
+                    className="px-6 py-4 cursor-pointer group"
+                    onClick={() => setSelectedLoan(loan)}
+                  >
                     <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+                      <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 group-hover:bg-orange-600 group-hover:text-white transition-colors">
                         <User className="w-4 h-4" />
                       </div>
                       <div>
-                        <div className="font-bold text-slate-900">
+                        <div className="font-bold text-slate-900 group-hover:text-orange-600 transition-colors">
                           {loan.profile?.full_name}
                         </div>
                         <div className="text-xs text-slate-500">
@@ -178,12 +239,16 @@ export function LoansList({ initialLoans }: { initialLoans: LoanWithRelations[] 
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="font-medium text-slate-800">
+                  <td
+                    className="px-6 py-4 cursor-pointer group"
+                    onClick={() => setSelectedLoan(loan)}
+                  >
+                    <div className="font-medium text-slate-800 group-hover:text-orange-600 transition-colors">
                       {loan.copy?.book?.title}
                     </div>
                     <div className="text-xs text-slate-500 flex items-center mt-0.5">
-                      <Hash className="w-3 h-3 mr-1" /> {loan.copy?.inventory_code}
+                      <Hash className="w-3 h-3 mr-1" />{" "}
+                      {loan.copy?.inventory_code}
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -191,7 +256,7 @@ export function LoansList({ initialLoans }: { initialLoans: LoanWithRelations[] 
                       <span
                         className={clsx(
                           "inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wider border w-fit",
-                          config.color
+                          config.color,
                         )}
                       >
                         {config.label}
@@ -213,7 +278,7 @@ export function LoansList({ initialLoans }: { initialLoans: LoanWithRelations[] 
                         <span
                           className={clsx(
                             "mt-1 font-semibold",
-                            isLate ? "text-rose-600" : "text-slate-500"
+                            isLate ? "text-rose-600" : "text-slate-500",
                           )}
                         >
                           Vence: {new Date(loan.due_at).toLocaleDateString()}
@@ -268,7 +333,7 @@ export function LoansList({ initialLoans }: { initialLoans: LoanWithRelations[] 
                                 "flex items-center gap-2 px-4 py-2 text-white rounded-xl text-xs font-bold shadow-md hover:opacity-90 transition-opacity",
                                 isLate
                                   ? "bg-rose-600 shadow-rose-200"
-                                  : "bg-slate-800 shadow-slate-200"
+                                  : "bg-slate-800 shadow-slate-200",
                               )}
                             >
                               <BookUp className="w-4 h-4" /> Recibir
@@ -285,6 +350,14 @@ export function LoansList({ initialLoans }: { initialLoans: LoanWithRelations[] 
         </table>
       </div>
 
+      {selectedLoan && (
+        <LoanReceipt
+          loan={selectedLoan}
+          onClose={() => setSelectedLoan(null)}
+          isStaffView={true}
+        />
+      )}
+
       {/* Vista Mobile (Cards) */}
       <div className="md:hidden divide-y divide-slate-100">
         {loans.map((loan) => {
@@ -292,16 +365,15 @@ export function LoansList({ initialLoans }: { initialLoans: LoanWithRelations[] 
             loan.status === "entregado" &&
             loan.due_at &&
             new Date() > new Date(loan.due_at);
-          const config =
-            statusConfig[loan.status] || { label: loan.status, color: "bg-gray-100" };
+          const config = statusConfig[loan.status] || {
+            label: loan.status,
+            color: "bg-gray-100",
+          };
 
           return (
             <div
               key={loan.id}
-              className={clsx(
-                "p-4 space-y-3",
-                isLate ? "bg-rose-50/30" : ""
-              )}
+              className={clsx("p-4 space-y-3", isLate ? "bg-rose-50/30" : "")}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -321,7 +393,7 @@ export function LoansList({ initialLoans }: { initialLoans: LoanWithRelations[] 
                   <span
                     className={clsx(
                       "px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border",
-                      config.color
+                      config.color,
                     )}
                   >
                     {config.label}
@@ -353,7 +425,7 @@ export function LoansList({ initialLoans }: { initialLoans: LoanWithRelations[] 
                     <div
                       className={clsx(
                         "text-[10px] font-bold uppercase tracking-wider",
-                        isLate ? "text-rose-600" : "text-slate-500"
+                        isLate ? "text-rose-600" : "text-slate-500",
                       )}
                     >
                       Vence: {new Date(loan.due_at).toLocaleDateString()}
@@ -369,9 +441,7 @@ export function LoansList({ initialLoans }: { initialLoans: LoanWithRelations[] 
                       {loan.status === "solicitado" && (
                         <>
                           <button
-                            onClick={() =>
-                              handleStatusUpdate(loan, "aprobado")
-                            }
+                            onClick={() => handleStatusUpdate(loan, "aprobado")}
                             disabled={loadingId === loan.id}
                             className="p-2 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-100"
                           >
@@ -407,7 +477,7 @@ export function LoansList({ initialLoans }: { initialLoans: LoanWithRelations[] 
                             "flex items-center gap-2 px-4 py-2 text-white rounded-xl text-xs font-bold shadow-md",
                             isLate
                               ? "bg-rose-600 shadow-rose-200"
-                              : "bg-slate-800 shadow-slate-200"
+                              : "bg-slate-800 shadow-slate-200",
                           )}
                         >
                           <BookUp className="w-4 h-4" /> Recibir

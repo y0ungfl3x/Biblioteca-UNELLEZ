@@ -6,7 +6,9 @@ export const dynamic = "force-dynamic";
 
 export default async function MyLoansPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) redirect("/login");
 
@@ -14,18 +16,21 @@ export default async function MyLoansPage() {
   const [loansResponse, profileResponse] = await Promise.all([
     supabase
       .from("loans")
-      .select(`
+      .select(
+        `
         *,
         copy:physical_copies(
           inventory_code,
-          book:books(title)
+          location,
+          book:books(title, code, category:categories(name))
         )
-      `)
+      `,
+      )
       .eq("user_id", user.id)
       .order("requested_at", { ascending: false }),
     supabase
       .from("profiles")
-      .select("status, suspended_until")
+      .select("status, suspended_until, full_name, cedula, email, phone")
       .eq("id", user.id)
       .single(),
   ]);

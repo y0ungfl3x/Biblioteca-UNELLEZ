@@ -12,7 +12,9 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
     redirect("/login");
@@ -29,15 +31,28 @@ export default async function DashboardLayout({
       {/* Mobile Top Bar */}
       <header className="md:hidden bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-40 shadow-sm">
         <div className="flex items-center space-x-3">
-          <img src="/logo.png" alt="UNELLEZ" className="h-8 w-auto object-contain" />
-          <span className="font-bold text-slate-900 tracking-tight">Biblioteca</span>
+          <img
+            src="/logo.png"
+            alt="UNELLEZ"
+            className="h-8 w-auto object-contain"
+          />
+          <span className="font-bold text-slate-900 tracking-tight">
+            Biblioteca
+          </span>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/dashboard/profile" className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-orange-50 hover:text-orange-600 transition-all border border-slate-100" title="Ver Perfil">
+          <Link
+            href="/dashboard/profile"
+            className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-orange-50 hover:text-orange-600 transition-all border border-slate-100"
+            title="Ver Perfil"
+          >
             <UserIcon className="w-4 h-4" />
           </Link>
           <form action={logout}>
-            <button type="submit" className="p-2 text-slate-400 hover:text-red-600 transition-colors">
+            <button
+              type="submit"
+              className="p-2 text-slate-400 hover:text-red-600 transition-colors"
+            >
               <LogOut className="w-5 h-5" />
             </button>
           </form>
@@ -47,22 +62,35 @@ export default async function DashboardLayout({
       {/* Sidebar (Desktop) */}
       <aside className="hidden md:flex w-64 bg-white border-r border-slate-200 flex-col shadow-sm sticky top-0 h-screen z-20">
         <div className="p-8 flex flex-col items-center">
-          <img src="/logo.png" alt="UNELLEZ" className="h-20 w-auto object-contain mb-4" />
+          <img
+            src="/logo.png"
+            alt="UNELLEZ"
+            className="h-20 w-auto object-contain mb-4"
+          />
           <div className="text-center">
-            <span className="block font-black text-slate-900 tracking-tighter text-xl">UNELLEZ</span>
-            <span className="block text-[10px] font-bold text-orange-600 uppercase tracking-[0.2em] -mt-1">Biblioteca</span>
+            <span className="block font-black text-slate-900 tracking-tighter text-xl">
+              UNELLEZ
+            </span>
+            <span className="block text-[10px] font-bold text-orange-600 uppercase tracking-[0.2em] -mt-1">
+              Biblioteca
+            </span>
           </div>
         </div>
-        
-        <SidebarNav role={profile?.role || 'estudiante'} />
+
+        <SidebarNav role={profile?.role || "estudiante"} />
 
         <div className="p-4 border-t border-slate-200 bg-slate-50">
           <div className="mb-4 px-2">
-            <p className="text-sm text-slate-900 font-semibold truncate">{profile?.full_name}</p>
+            <p className="text-sm text-slate-900 font-semibold truncate">
+              {profile?.full_name}
+            </p>
             <p className="text-xs text-slate-500 capitalize">{profile?.role}</p>
           </div>
           <form action={logout}>
-            <button type="submit" className="w-full flex items-center space-x-2 px-3 py-2 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+            <button
+              type="submit"
+              className="w-full flex items-center space-x-2 px-3 py-2 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            >
               <LogOut className="w-4 h-4" />
               <span className="text-sm font-medium">Cerrar Sesión</span>
             </button>
@@ -77,7 +105,7 @@ export default async function DashboardLayout({
       </main>
 
       {/* Mobile Bottom Nav */}
-      <MobileNav role={profile?.role || 'estudiante'} />
+      <MobileNav role={profile?.role || "estudiante"} />
     </div>
   );
 }
