@@ -105,25 +105,38 @@ export function MyLoansClient({
   initialLoans,
   initialProfile,
   userId,
+  initialTotal = 0,
+  initialPageSize = 5,
 }: {
   initialLoans: Loan[];
   initialProfile: Profile | null;
   userId: string;
+  initialTotal?: number;
+  initialPageSize?: number;
 }) {
   const [loans, setLoans] = useState(initialLoans);
   const [profile, setProfile] = useState(initialProfile);
   const [selectedLoanId, setSelectedLoanId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(initialPageSize);
+  const [total, setTotal] = useState<number>(initialTotal);
+  const [statusFilter, setStatusFilter] = useState<string | "">("");
 
   const isSuspended =
     profile?.status === "bloqueado" ||
     (profile?.suspended_until &&
       new Date() < new Date(profile.suspended_until));
 
-  const fetchData = useCallback(async () => {
-    const supabase = createClient();
+  const fetchData = useCallback(
+    async (opts?: { page?: number; status?: string }) => {
+      const supabase = createClient();
+      const currentPage = opts?.page ?? page;
+      const currentStatus = opts?.status ?? statusFilter;
 
-    const [loansRes, profileRes] = await Promise.all([
-      supabase
+      const start = (currentPage - 1) * pageSize;
+      const end = start + pageSize - 1;
+
+      let query = supabase
         .from("loans")
         .select(
           `
@@ -134,19 +147,30 @@ export function MyLoansClient({
             book:books(title, code, category:categories(name))
           )
         `,
+          { count: "exact" },
         )
         .eq("user_id", userId)
-        .order("requested_at", { ascending: false }),
-      supabase
+        .order("requested_at", { ascending: false })
+        .range(start, end);
+
+      if (currentStatus) query = query.eq("status", currentStatus);
+
+      const profilePromise = supabase
         .from("profiles")
         .select("status, suspended_until, full_name, cedula, email, phone")
         .eq("id", userId)
-        .single(),
-    ]);
+        .single();
 
-    if (loansRes.data) setLoans(loansRes.data as unknown as Loan[]);
-    if (profileRes.data) setProfile(profileRes.data as Profile);
-  }, [userId]);
+      const [loansRes, profileRes] = await Promise.all([query, profilePromise]);
+
+      if (loansRes.data)
+        setTotal(typeof loansRes.count === "number" ? loansRes.count : 0);
+
+      if (loansRes.data) setLoans(loansRes.data as unknown as Loan[]);
+      if (profileRes.data) setProfile(profileRes.data as Profile);
+    },
+    [userId, page, pageSize, statusFilter],
+  );
 
   useEffect(() => {
     const supabase = createClient();
@@ -192,8 +216,9 @@ export function MyLoansClient({
     };
   }, [userId, fetchData]);
 
-  const selectedLoan =
-    loans.find((loan) => loan.id === selectedLoanId) ?? null;
+  // La recarga por pagina/filtro se maneja en los handlers
+
+  const selectedLoan = loans.find((loan) => loan.id === selectedLoanId) ?? null;
 
   const receiptLoan = selectedLoan
     ? {
@@ -244,6 +269,26 @@ export function MyLoansClient({
       )}
 
       <div className="grid grid-cols-1 gap-4">
+        <div className="flex items-center gap-3">
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+              fetchData({ page: 1, status: e.target.value || undefined });
+            }}
+            className="text-sm rounded-xl border px-3 py-2 mb-2"
+          >
+            <option value="">Todos los estados</option>
+            <option value="solicitado">Solicitado</option>
+            <option value="aprobado">Aprobado</option>
+            <option value="entregado">Entregado</option>
+            <option value="devuelto">Devuelto</option>
+            <option value="rechazado">Rechazado</option>
+            <option value="vencido">Vencido</option>
+            <option value="multado">Multado</option>
+          </select>
+        </div>
         {loans.map((loan) => {
           const config = statusConfig[loan.status] || {
             label: loan.status,
@@ -361,6 +406,49 @@ export function MyLoansClient({
             </Link>
           </div>
         )}
+
+        {/* Paginación */}
+        <div className="flex items-center justify-between mt-4">
+          <div className="text-sm text-slate-500">Total: {total}</div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (page > 1) {
+                  const nextPage = page - 1;
+                  setPage(nextPage);
+                  fetchData({
+                    page: nextPage,
+                    status: statusFilter || undefined,
+                  });
+                }
+              }}
+              disabled={page === 1}
+              className="px-3 py-1 rounded-lg border text-sm disabled:opacity-50"
+            >
+              Anterior
+            </button>
+            <div className="text-sm">
+              {page} / {Math.max(1, Math.ceil(total / pageSize))}
+            </div>
+            <button
+              onClick={() => {
+                const maxPage = Math.max(1, Math.ceil(total / pageSize));
+                if (page < maxPage) {
+                  const nextPage = page + 1;
+                  setPage(nextPage);
+                  fetchData({
+                    page: nextPage,
+                    status: statusFilter || undefined,
+                  });
+                }
+              }}
+              disabled={page >= Math.ceil(total / pageSize)}
+              className="px-3 py-1 rounded-lg border text-sm disabled:opacity-50"
+            >
+              Siguiente
+            </button>
+          </div>
+        </div>
       </div>
 
       {receiptLoan && (

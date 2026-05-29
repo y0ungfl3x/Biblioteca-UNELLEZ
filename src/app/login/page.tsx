@@ -101,7 +101,6 @@ export default function LoginPage() {
                   name="email"
                   type="email"
                   required
-                  placeholder="usuario@unellez.edu.ve"
                   className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all shadow-sm"
                 />
               </div>
@@ -119,10 +118,18 @@ export default function LoginPage() {
                   name="password"
                   type="password"
                   required
-                  placeholder="••••••••"
                   className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all shadow-sm"
                 />
               </div>
+            </div>
+
+            <div className="text-center mt-4">
+              <Link
+                href="/login/forgot-password"
+                className="text-sm text-orange-600 hover:underline"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
             </div>
 
             <button

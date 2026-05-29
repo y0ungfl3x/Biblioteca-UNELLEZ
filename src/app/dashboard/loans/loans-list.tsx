@@ -18,6 +18,7 @@ import { LoanReceipt } from "@/components/loan-receipt";
 import { createClient } from "@/lib/supabase/client";
 import { clsx } from "clsx";
 import { toast } from "sonner";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 export interface LoanWithRelations {
   id: string;
@@ -52,8 +53,12 @@ export interface LoanWithRelations {
 
 export function LoansList({
   initialLoans,
+  initialTotal = 0,
+  initialPageSize = 5,
 }: {
   initialLoans: LoanWithRelations[];
+  initialTotal?: number;
+  initialPageSize?: number;
 }) {
   const [loans, setLoans] = useState(initialLoans);
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -61,37 +66,78 @@ export function LoansList({
   const [selectedLoan, setSelectedLoan] = useState<LoanWithRelations | null>(
     null,
   );
+  const [confirmLateReturn, setConfirmLateReturn] = useState<{
+    loan: LoanWithRelations;
+    status: string;
+  } | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(initialPageSize);
+  const [total, setTotal] = useState(initialTotal);
+  const [statusFilter, setStatusFilter] = useState<string | "">("");
+  const [fromDate, setFromDate] = useState<string | null>(null);
+  const [toDate, setToDate] = useState<string | null>(null);
 
-  const fetchLoans = useCallback(async () => {
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("loans")
-      .select(
-        `
-        *,
-        profile:profiles!loans_user_id_fkey(*),
-        copy:physical_copies(
-          inventory_code,
-          location,
-          book:books(title, code, category:categories(name))
+  const fetchLoans = useCallback(
+    async (opts?: {
+      page?: number;
+      status?: string;
+      from?: string | null;
+      to?: string | null;
+    }) => {
+      const supabase = createClient();
+      const currentPage = opts?.page ?? page;
+      const start = (currentPage - 1) * pageSize;
+      const end = start + pageSize - 1;
+
+      let query = supabase
+        .from("loans")
+        .select(
+          `
+          *,
+          profile:profiles!loans_user_id_fkey(*),
+          copy:physical_copies(
+            inventory_code,
+            location,
+            book:books(title, code, category:categories(name))
+          )
+        `,
+          { count: "exact" },
         )
-      `,
-      )
-      .order("requested_at", { ascending: false });
+        .order("requested_at", { ascending: false })
+        .range(start, end);
 
-    if (data) {
-      setLoans(data as unknown as LoanWithRelations[]);
-      // Pulso visual de "recibido dato en tiempo real"
-      setLiveIndicator(true);
-      setTimeout(() => setLiveIndicator(false), 1500);
-    }
-  }, []);
+      if (opts?.status) {
+        query = query.eq("status", opts.status);
+      }
+      if (opts?.from) {
+        query = query.gte("requested_at", opts.from);
+      }
+      if (opts?.to) {
+        query = query.lte("requested_at", opts.to);
+      }
+
+      const { data, count } = await query;
+
+      if (data) {
+        setLoans(data as unknown as LoanWithRelations[]);
+        setTotal(typeof count === "number" ? count : 0);
+        // Pulso visual de "recibido dato en tiempo real"
+        setLiveIndicator(true);
+        setTimeout(() => setLiveIndicator(false), 1500);
+      }
+    },
+    [page, pageSize],
+  );
 
   useEffect(() => {
     const supabase = createClient();
 
     // Polling cada 5 segundos como respaldo confiable
-    const interval = setInterval(fetchLoans, 5000);
+    const interval = setInterval(
+      () =>
+        fetchLoans({ page, status: statusFilter, from: fromDate, to: toDate }),
+      5000,
+    );
 
     // Realtime como canal instantáneo (si está habilitado en Supabase)
     const channel = supabase
@@ -100,7 +146,12 @@ export function LoansList({
         "postgres_changes",
         { event: "*", schema: "public", table: "loans" },
         () => {
-          fetchLoans();
+          fetchLoans({
+            page,
+            status: statusFilter,
+            from: fromDate,
+            to: toDate,
+          });
         },
       )
       .subscribe();
@@ -109,16 +160,14 @@ export function LoansList({
       clearInterval(interval);
       supabase.removeChannel(channel);
     };
-  }, [fetchLoans]);
+  }, [fetchLoans, page, statusFilter, fromDate, toDate]);
 
   async function handleStatusUpdate(loan: LoanWithRelations, status: string) {
     if (status === "devuelto" && loan.due_at) {
       const dueAtDate = new Date(loan.due_at);
       if (new Date() > dueAtDate) {
-        const confirm = window.confirm(
-          "¡ATENCIÓN!\n\nEste libro se está devolviendo fuera de la fecha de vencimiento.\n\nAl procesarlo, el sistema automáticamente:\n1. Cambiará el estado del préstamo a 'Vencido'.\n2. Sancionará al estudiante con 1 mes de suspensión.\n3. Bloqueará su cuenta.\n\n¿Deseas continuar con la recepción?",
-        );
-        if (!confirm) return;
+        setConfirmLateReturn({ loan, status });
+        return;
       }
     }
 
@@ -129,7 +178,29 @@ export function LoansList({
     } else {
       toast.success("Estado actualizado con éxito.");
       // Refrescar la lista inmediatamente después de la acción
-      await fetchLoans();
+      await fetchLoans({
+        page,
+        status: statusFilter,
+        from: fromDate,
+        to: toDate,
+      });
+    }
+    setLoadingId(null);
+  }
+
+  async function executeStatusUpdate(loan: LoanWithRelations, status: string) {
+    setLoadingId(loan.id);
+    const res = await updateLoanStatus(loan.id, status);
+    if (res.error) {
+      toast.error(res.error);
+    } else {
+      toast.success("Estado actualizado con éxito.");
+      await fetchLoans({
+        page,
+        status: statusFilter,
+        from: fromDate,
+        to: toDate,
+      });
     }
     setLoadingId(null);
   }
@@ -167,6 +238,72 @@ export function LoansList({
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+      {/* Controles de filtros y paginación */}
+      <div className="px-6 py-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+              fetchLoans({
+                page: 1,
+                status: e.target.value || undefined,
+                from: fromDate,
+                to: toDate,
+              });
+            }}
+            className="text-sm rounded-xl border px-3 py-2"
+          >
+            <option value="">Todos los estados</option>
+            <option value="solicitado">Solicitado</option>
+            <option value="aprobado">Aprobado</option>
+            <option value="entregado">Entregado</option>
+            <option value="devuelto">Devuelto</option>
+            <option value="rechazado">Rechazado</option>
+            <option value="vencido">Vencido</option>
+            <option value="multado">Multado</option>
+          </select>
+
+          <input
+            type="date"
+            value={fromDate ?? ""}
+            onChange={(e) => {
+              setFromDate(e.target.value || null);
+              setPage(1);
+              fetchLoans({
+                page: 1,
+                status: statusFilter || undefined,
+                from: e.target.value || null,
+                to: toDate,
+              });
+            }}
+            className="text-sm rounded-xl border px-3 py-2"
+          />
+
+          <input
+            type="date"
+            value={toDate ?? ""}
+            onChange={(e) => {
+              setToDate(e.target.value || null);
+              setPage(1);
+              fetchLoans({
+                page: 1,
+                status: statusFilter || undefined,
+                from: fromDate,
+                to: e.target.value || null,
+              });
+            }}
+            className="text-sm rounded-xl border px-3 py-2"
+          />
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="text-sm text-slate-500">Mostrando</div>
+          <div className="font-semibold">{pageSize}</div>
+          <div className="text-sm text-slate-500">por página</div>
+        </div>
+      </div>
       {/* Indicador Realtime */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-slate-100 bg-slate-50/50">
         <span className="text-xs text-slate-400 font-medium">
@@ -358,6 +495,32 @@ export function LoansList({
         />
       )}
 
+      {confirmLateReturn && (
+        <ConfirmModal
+          isOpen={!!confirmLateReturn}
+          title="¡Devolución Tardía Detectada!"
+          description="Este libro se está devolviendo fuera de la fecha de vencimiento.
+
+Al procesarlo, el sistema automáticamente:
+1. Marcará el préstamo como 'Vencido'.
+2. Suspenderá al estudiante por 1 mes.
+3. Bloqueará su cuenta.
+
+¿Confirmas la recepción con sanción?"
+          confirmText="Sí, procesar sanción"
+          cancelText="No, cancelar"
+          isWarning={true}
+          onClose={() => setConfirmLateReturn(null)}
+          onConfirm={() => {
+            executeStatusUpdate(
+              confirmLateReturn.loan,
+              confirmLateReturn.status,
+            );
+            setConfirmLateReturn(null);
+          }}
+        />
+      )}
+
       {/* Vista Mobile (Cards) */}
       <div className="md:hidden divide-y divide-slate-100">
         {loans.map((loan) => {
@@ -497,6 +660,53 @@ export function LoansList({
           No hay solicitudes de préstamo registradas.
         </div>
       )}
+
+      {/* Paginación */}
+      <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+        <div className="text-sm text-slate-500">Total: {total}</div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              if (page > 1) {
+                const newPage = page - 1;
+                setPage(newPage);
+                fetchLoans({
+                  page: newPage,
+                  status: statusFilter || undefined,
+                  from: fromDate,
+                  to: toDate,
+                });
+              }
+            }}
+            disabled={page === 1}
+            className="px-3 py-1 rounded-lg border text-sm disabled:opacity-50"
+          >
+            Anterior
+          </button>
+          <div className="text-sm">
+            {page} / {Math.max(1, Math.ceil(total / pageSize))}
+          </div>
+          <button
+            onClick={() => {
+              const maxPage = Math.max(1, Math.ceil(total / pageSize));
+              if (page < maxPage) {
+                const newPage = page + 1;
+                setPage(newPage);
+                fetchLoans({
+                  page: newPage,
+                  status: statusFilter || undefined,
+                  from: fromDate,
+                  to: toDate,
+                });
+              }
+            }}
+            disabled={page >= Math.ceil(total / pageSize)}
+            className="px-3 py-1 rounded-lg border text-sm disabled:opacity-50"
+          >
+            Siguiente
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

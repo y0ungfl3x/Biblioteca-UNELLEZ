@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { BookOpen, LogOut, User as UserIcon } from "lucide-react";
+import { LogOut, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 import { logout } from "@/app/actions/auth";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { MobileNav } from "@/components/mobile-nav";
+import { PushNotifications } from "@/components/push-notifications";
 
 export default async function DashboardLayout({
   children,
@@ -101,6 +102,9 @@ export default async function DashboardLayout({
       {/* Main Content */}
       <main className="flex-1 overflow-auto relative bg-slate-50 pb-20 md:pb-0">
         <div className="absolute top-0 right-0 w-96 h-96 bg-orange-500/5 rounded-full blur-[100px] pointer-events-none" />
+        <div className="p-6 md:p-8 max-w-5xl mx-auto">
+          <PushNotifications />
+        </div>
         {children}
       </main>
 

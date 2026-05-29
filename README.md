@@ -14,6 +14,23 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 Puedes obtener ambos valores en Supabase: `Project Settings > API`.
 
+### Variables para notificaciones push
+
+Genera las VAPID keys (una sola vez):
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Luego agrega a `.env.local`:
+
+```bash
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+VAPID_SUBJECT=mailto:admin@unellez.edu.ve
+CRON_SECRET=tu_secreto_para_cron
+```
+
 ## 2) Levantar el proyecto
 
 ```bash

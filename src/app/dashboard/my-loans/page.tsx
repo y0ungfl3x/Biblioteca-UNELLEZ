@@ -13,6 +13,10 @@ export default async function MyLoansPage() {
   if (!user) redirect("/login");
 
   // Obtener datos iniciales del servidor (SSR para carga rápida)
+  const pageSize = 5;
+  const from = 0;
+  const to = pageSize - 1;
+
   const [loansResponse, profileResponse] = await Promise.all([
     supabase
       .from("loans")
@@ -25,9 +29,11 @@ export default async function MyLoansPage() {
           book:books(title, code, category:categories(name))
         )
       `,
+        { count: "exact" },
       )
       .eq("user_id", user.id)
-      .order("requested_at", { ascending: false }),
+      .order("requested_at", { ascending: false })
+      .range(from, to),
     supabase
       .from("profiles")
       .select("status, suspended_until, full_name, cedula, email, phone")
@@ -38,6 +44,10 @@ export default async function MyLoansPage() {
   return (
     <MyLoansClient
       initialLoans={loansResponse.data ?? []}
+      initialTotal={
+        typeof loansResponse.count === "number" ? loansResponse.count : 0
+      }
+      initialPageSize={pageSize}
       initialProfile={profileResponse.data ?? null}
       userId={user.id}
     />

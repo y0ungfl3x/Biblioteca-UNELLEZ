@@ -22,8 +22,16 @@ export default async function LoansPage() {
     redirect("/dashboard");
   }
 
-  // Obtener préstamos pendientes y activos
-  const { data: loans, error: loansError } = await supabase
+  // Obtener primera página (5 items) junto con el conteo total para paginación
+  const pageSize = 5;
+  const from = 0;
+  const to = pageSize - 1;
+
+  const {
+    data: loans,
+    count,
+    error: loansError,
+  } = await supabase
     .from("loans")
     .select(
       `
@@ -34,8 +42,10 @@ export default async function LoansPage() {
         book:books(title, code, category:categories(name))
       )
     `,
+      { count: "exact" },
     )
-    .order("requested_at", { ascending: false });
+    .order("requested_at", { ascending: false })
+    .range(from, to);
 
   if (loansError) {
     console.error("Error fetching loans:", loansError);
@@ -52,7 +62,11 @@ export default async function LoansPage() {
         </p>
       </div>
 
-      <LoansList initialLoans={loans || []} />
+      <LoansList
+        initialLoans={loans || []}
+        initialTotal={typeof count === "number" ? count : 0}
+        initialPageSize={pageSize}
+      />
     </div>
   );
 }

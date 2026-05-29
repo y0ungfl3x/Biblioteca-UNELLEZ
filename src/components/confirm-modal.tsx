@@ -28,7 +28,7 @@ export function ConfirmModal({
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    setTimeout(() => setMounted(true), 0);
   }, []);
 
   // Evitar scroll del body cuando el modal está abierto
@@ -48,22 +48,28 @@ export function ConfirmModal({
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Fondo borroso translúcido */}
-      <div 
+      <div
         className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300"
         onClick={onClose}
       />
-      
+
       {/* Contenedor del Modal */}
       <div className="relative bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl p-6 shadow-2xl border border-slate-100 dark:border-slate-800 transform transition-all duration-300 scale-100 animate-in fade-in zoom-in-95">
         <div className="flex items-start gap-4">
-          <div className={`p-3 rounded-full shrink-0 ${
-            isWarning 
-              ? "bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400" 
-              : "bg-orange-50 text-orange-600 dark:bg-orange-950/30 dark:text-orange-400"
-          }`}>
-            {isWarning ? <AlertCircle className="w-6 h-6" /> : <HelpCircle className="w-6 h-6" />}
+          <div
+            className={`p-3 rounded-full shrink-0 ${
+              isWarning
+                ? "bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400"
+                : "bg-orange-50 text-orange-600 dark:bg-orange-950/30 dark:text-orange-400"
+            }`}
+          >
+            {isWarning ? (
+              <AlertCircle className="w-6 h-6" />
+            ) : (
+              <HelpCircle className="w-6 h-6" />
+            )}
           </div>
-          
+
           <div className="space-y-2">
             <h3 className="text-lg font-bold text-slate-950 dark:text-white leading-tight">
               {title}
@@ -73,7 +79,7 @@ export function ConfirmModal({
             </p>
           </div>
         </div>
-        
+
         <div className="flex items-center justify-end gap-3 mt-6">
           <button
             type="button"
@@ -99,7 +105,6 @@ export function ConfirmModal({
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }
-

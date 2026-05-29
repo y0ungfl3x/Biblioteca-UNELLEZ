@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { sendPushToUser } from "@/lib/push";
 import { revalidatePath } from "next/cache";
 
 export async function requestLoan(bookId: string) {
@@ -53,7 +54,7 @@ export async function updateLoanStatus(loanId: string, newStatus: string) {
   // Obtener los datos del préstamo actual antes de actualizar
   const { data: currentLoan, error: fetchError } = await supabase
     .from("loans")
-    .select("due_at, user_id, copy_id")
+    .select("due_at, user_id, copy_id, copy:physical_copies(book:books(title))")
     .eq("id", loanId)
     .single();
 
@@ -108,8 +109,11 @@ export async function updateLoanStatus(loanId: string, newStatus: string) {
         // Cambiar estado a vencido
         updatePayload.status = "vencido";
 
+        // Usar cliente admin para actualizar perfiles si es necesario
+        const adminSupabase = await createClient(); // Si RLS lo permite, o createAdminClient() si no
+
         // 1. Cambiar estado de perfil a bloqueado y fijar suspended_until
-        const { error: profileError } = await supabase
+        const { error: profileError } = await adminSupabase
           .from("profiles")
           .update({
             status: "bloqueado",
@@ -119,13 +123,14 @@ export async function updateLoanStatus(loanId: string, newStatus: string) {
 
         if (profileError) {
           console.error("Error al suspender al estudiante:", profileError);
+          // Opcional: podrías decidir no fallar aquí para que al menos el libro se marque como devuelto/vencido
         }
 
         // 2. Registrar en public.audit_log con los días de mora
         const diffTime = Math.abs(returnedAt.getTime() - dueAtDate.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-        await supabase.from("audit_log").insert({
+        await adminSupabase.from("audit_log").insert({
           actor_user_id: user.id,
           actor_role: profile?.role,
           action: "suspension_devolucion_tardia",
@@ -142,16 +147,51 @@ export async function updateLoanStatus(loanId: string, newStatus: string) {
     }
   }
 
-  const { error } = await supabase
+  const { error: updateLoanError } = await supabase
     .from("loans")
     .update(updatePayload)
     .eq("id", loanId);
 
-  if (error) return { error: "Error al actualizar el estado" };
+  if (updateLoanError) {
+    console.error("Error updating loan:", updateLoanError);
+    return { error: "Error al actualizar el estado del préstamo" };
+  }
 
   revalidatePath("/dashboard/loans");
   revalidatePath("/dashboard/my-loans");
   revalidatePath("/");
+
+  const statusLabels: Record<string, string> = {
+    solicitado: "Solicitado",
+    aprobado: "Aprobado",
+    entregado: "Entregado",
+    devuelto: "Devuelto",
+    rechazado: "Rechazado",
+    vencido: "Vencido",
+    multado: "Multado",
+  };
+
+  const finalStatus = updatePayload.status;
+
+  // Manejo seguro del título del libro basado en la estructura de Supabase (relación simple o array)
+  const rawCopy = currentLoan.copy as any;
+  const bookData = Array.isArray(rawCopy?.book)
+    ? rawCopy.book[0]
+    : rawCopy?.book;
+  const bookTitle = bookData?.title || "tu libro";
+
+  try {
+    await sendPushToUser(currentLoan.user_id, {
+      title: "Actualizacion de prestamo",
+      body: `Tu prestamo de "${bookTitle}" cambio a ${
+        statusLabels[finalStatus] || finalStatus
+      }.`,
+      url: "/dashboard/my-loans",
+    });
+  } catch {
+    // Ignorar errores de push para no bloquear la operacion principal
+  }
+
   return { success: true };
 }
 

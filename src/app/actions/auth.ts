@@ -22,6 +22,29 @@ export async function login(formData: FormData) {
   return { success: true };
 }
 
+export async function requestPasswordReset(formData: FormData) {
+  const email = formData.get("email") as string;
+  const supabase = await createClient();
+
+  // Obtener la URL base de la solicitud actual
+  const { headers } = await import("next/headers");
+  const host = (await headers()).get("host");
+  const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+  const redirectUrl = `${protocol}://${host}/auth/callback?next=/reset-password`;
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: redirectUrl,
+  });
+
+  if (error) {
+    return {
+      error: "No se pudo enviar el correo de recuperación. Inténtalo de nuevo.",
+    };
+  }
+
+  return { success: true };
+}
+
 export async function logout() {
   const supabase = await createClient();
   await supabase.auth.signOut();
@@ -30,7 +53,10 @@ export async function logout() {
 
 export async function createSystemUser(formData: FormData) {
   const supabase = await createClient();
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
 
   if (authError || !user) {
     return { error: "No autorizado" };
@@ -43,17 +69,22 @@ export async function createSystemUser(formData: FormData) {
     .eq("id", user.id)
     .single();
 
-  if (!profile || (profile.role !== "administrador" && profile.role !== "bibliotecario")) {
+  if (
+    !profile ||
+    (profile.role !== "administrador" && profile.role !== "bibliotecario")
+  ) {
     return { error: "No tienes permisos para crear usuarios" };
   }
 
   const role = formData.get("role") as string;
-  
-  // Regla de Negocio: 
+
+  // Regla de Negocio:
   // Administradores -> Solo pueden crear bibliotecarios.
   // Bibliotecarios -> Solo pueden crear estudiantes.
   if (profile.role === "administrador" && role !== "bibliotecario") {
-    return { error: "Los administradores solo pueden registrar bibliotecarios" };
+    return {
+      error: "Los administradores solo pueden registrar bibliotecarios",
+    };
   }
   if (profile.role === "bibliotecario" && role !== "estudiante") {
     return { error: "Los bibliotecarios solo pueden registrar estudiantes" };
@@ -66,7 +97,7 @@ export async function createSystemUser(formData: FormData) {
   const phone = formData.get("phone") as string;
 
   const adminClient = createAdminClient();
-  
+
   // Se crea el usuario en Auth, y nuestro trigger en la BD insertará el perfil
   // con el rol correspondiente en public.profiles automáticamente.
   const { data, error } = await adminClient.auth.admin.createUser({
@@ -85,10 +116,7 @@ export async function createSystemUser(formData: FormData) {
   }
 
   if (phone) {
-    await adminClient
-      .from("profiles")
-      .update({ phone })
-      .eq("id", data.user.id);
+    await adminClient.from("profiles").update({ phone }).eq("id", data.user.id);
   }
 
   return { success: true, userId: data.user.id };
