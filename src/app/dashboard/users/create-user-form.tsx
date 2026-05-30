@@ -49,7 +49,16 @@ export function CreateUserForm({ currentRole }: { currentRole?: string }) {
 
       <div className="space-y-1">
         <label className="block text-xs font-bold text-slate-700 ml-1">Cédula</label>
-        <input name="cedula" required className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 outline-none transition-all shadow-sm" />
+        <input
+          name="cedula"
+          required
+          inputMode="numeric"
+          pattern="[0-9]+"
+          title="Solo se permiten números"
+          placeholder="Ej: 12345678"
+          onInput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, ''); }}
+          className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 outline-none transition-all shadow-sm"
+        />
       </div>
 
       <div className="space-y-1">
@@ -59,7 +68,15 @@ export function CreateUserForm({ currentRole }: { currentRole?: string }) {
 
       <div className="space-y-1">
         <label className="block text-xs font-bold text-slate-700 ml-1">Teléfono</label>
-        <input name="phone" placeholder="Ej: +58 412-1234567" className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 outline-none transition-all shadow-sm" />
+        <input
+          name="phone"
+          inputMode="numeric"
+          pattern="[0-9]+"
+          title="Solo se permiten números"
+          placeholder="Ej: 04121234567"
+          onInput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, ''); }}
+          className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 outline-none transition-all shadow-sm"
+        />
       </div>
 
       <div className="space-y-1">
