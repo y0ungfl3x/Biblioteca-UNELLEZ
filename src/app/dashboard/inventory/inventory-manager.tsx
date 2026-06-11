@@ -261,7 +261,7 @@ function BookRow({ book, isExpanded, onToggle }: { book: InventoryBook, isExpand
           <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border shadow-sm ${
             book.physical_total > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'
           }`}>
-            {book.physical_total} Copias
+            {book.physical_total} {book.physical_total === 1 ? 'Copia' : 'Copias'}
           </span>
         </td>
         <td className="px-6 py-4">
@@ -377,7 +377,7 @@ function MobileBookCard({ book, isExpanded, onToggle }: { book: InventoryBook, i
             <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
               book.physical_total > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'
             }`}>
-              {book.physical_total} Copias
+              {book.physical_total} {book.physical_total === 1 ? 'Copia' : 'Copias'}
             </span>
             <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
               book.ebooks_total > 0 ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-500 border-slate-200'

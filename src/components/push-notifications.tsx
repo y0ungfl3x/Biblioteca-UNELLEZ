@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { X } from "lucide-react";
+
+const DISMISS_KEY = "push-banner-dismissed";
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -23,6 +26,7 @@ export function PushNotifications() {
   const [isWorking, setIsWorking] = useState(false);
   const [isSynced, setIsSynced] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     // Usar setTimeout para mover el setState fuera del ciclo de renderizado sincrónico
@@ -35,9 +39,15 @@ export function PushNotifications() {
       setSupported(hasSupport);
       if (typeof window !== "undefined") {
         setPermission(Notification.permission);
+        setDismissed(localStorage.getItem(DISMISS_KEY) === "1");
       }
     }, 0);
   }, []);
+
+  function dismiss() {
+    localStorage.setItem(DISMISS_KEY, "1");
+    setDismissed(true);
+  }
 
   const publicKey = useMemo(
     () => process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "",
@@ -127,36 +137,42 @@ export function PushNotifications() {
     }
   }, [registerAndSendSubscription]);
 
-  if (!mounted || !supported) return null;
+  if (!mounted || !supported || dismissed) return null;
 
-  if (permission === "granted" && isSynced) {
-    return (
-      <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-2xl text-sm flex items-center gap-2">
-        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-        Notificaciones push activas.
-      </div>
-    );
-  }
+  // Una vez activas y sincronizadas, no hace falta seguir mostrando el banner
+  if (permission === "granted" && isSynced) return null;
 
   return (
-    <div className="bg-white border border-slate-200 px-4 py-3 rounded-2xl flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-sm">
-      <div>
-        <div className="font-semibold text-slate-900">
-          Activa notificaciones push
+    <div className="px-6 md:px-8 pt-6 md:pt-8 max-w-7xl mx-auto">
+      <div className="bg-white border border-slate-200 px-4 py-3 rounded-2xl flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-sm">
+        <div>
+          <div className="font-semibold text-slate-900">
+            Activa notificaciones push
+          </div>
+          <div className="text-slate-500">
+            Recibe alertas de cambios de prestamos y recordatorios.
+          </div>
+          {error && <div className="text-rose-600 text-xs mt-1">{error}</div>}
         </div>
-        <div className="text-slate-500">
-          Recibe alertas de cambios de prestamos y recordatorios.
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={enablePush}
+            disabled={isWorking}
+            className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold disabled:opacity-60 transition-colors"
+          >
+            {isWorking ? "Activando..." : "Activar"}
+          </button>
+          <button
+            type="button"
+            onClick={dismiss}
+            aria-label="Descartar aviso de notificaciones"
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
-        {error && <div className="text-rose-600 text-xs mt-1">{error}</div>}
       </div>
-      <button
-        type="button"
-        onClick={enablePush}
-        disabled={isWorking}
-        className="px-4 py-2 rounded-xl bg-orange-600 text-white text-sm font-semibold disabled:opacity-60"
-      >
-        {isWorking ? "Activando..." : "Activar"}
-      </button>
     </div>
   );
 }

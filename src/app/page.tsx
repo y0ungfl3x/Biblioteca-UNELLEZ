@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { LoanButton } from "@/components/loan-button";
+import { BookCover } from "@/components/book-cover";
 
 export const dynamic = "force-dynamic";
 
@@ -164,30 +165,27 @@ export default async function CatalogPage({
 
       {/* Cuadrícula de Libros */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 relative z-20">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-          {books?.map((book) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          {books?.map((book, index) => (
             <div
               key={book.id}
-              className="group flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300"
+              className="card-enter group flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300"
+              style={{ "--enter-delay": `${Math.min(index, 8) * 50}ms` } as React.CSSProperties}
             >
               <div className="h-48 w-full relative bg-gradient-to-br from-slate-100 to-slate-200 flex flex-col justify-end overflow-hidden group-hover:cursor-pointer">
-                {book.cover_image_path ? (
-                  <img
-                    src={book.cover_image_path}
-                    alt={`Portada de ${book.title}`}
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                ) : (
-                  <>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-0" />
-                    <div className="absolute top-4 right-4 w-12 h-12 rounded-full bg-white/40 flex items-center justify-center backdrop-blur-md text-xl font-bold text-slate-700 shadow-sm">
-                      {book.title.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="absolute -bottom-4 -left-4 text-9xl font-black text-slate-900/[0.03] pointer-events-none select-none z-0">
-                      {book.title.charAt(0).toUpperCase()}
-                    </div>
-                  </>
-                )}
+                <BookCover
+                  src={book.cover_image_path}
+                  alt={`Portada de ${book.title}`}
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-0" />
+                  <div className="absolute top-4 right-4 w-12 h-12 rounded-full bg-white/40 flex items-center justify-center backdrop-blur-md text-xl font-bold text-slate-700 shadow-sm">
+                    {book.title.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="absolute -bottom-4 -left-4 text-9xl font-black text-slate-900/[0.03] pointer-events-none select-none z-0">
+                    {book.title.charAt(0).toUpperCase()}
+                  </div>
+                </BookCover>
 
                 <div className="relative z-10 p-6 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
                   <h3 className="text-white font-bold text-lg leading-tight line-clamp-2">

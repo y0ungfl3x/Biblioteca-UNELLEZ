@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, BookOpen } from "lucide-react";
+import { PdfViewer } from "@/components/pdf-viewer";
 
 export default async function ReadBookPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -77,12 +78,10 @@ export default async function ReadBookPage({ params }: { params: Promise<{ id: s
 
       {/* Visor de PDF (Iframe) */}
       <main className="flex-1 bg-slate-900 relative">
-        <iframe 
+        <PdfViewer
           src={`${ebook.storage_path}#toolbar=0&navpanes=0&scrollbar=0`}
-          className="absolute inset-0 w-full h-full border-0"
           title={`Lector PDF - ${book.title}`}
-          allowFullScreen
-        ></iframe>
+        />
       </main>
     </div>
   );

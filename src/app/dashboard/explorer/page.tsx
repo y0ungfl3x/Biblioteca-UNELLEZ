@@ -2,7 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { BookOpen, Search } from "lucide-react";
 import Link from "next/link";
+import { clsx } from "clsx";
 import { LoanButton } from "@/components/loan-button";
+import { BookCover } from "@/components/book-cover";
 
 export const dynamic = "force-dynamic";
 
@@ -78,21 +80,23 @@ export default async function ExplorerPage({
 
       {/* Grid de Libros */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {books?.map((book) => (
-          <div key={book.id} className="group bg-white border border-slate-100 rounded-3xl p-5 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+        {books?.map((book, index) => (
+          <div
+            key={book.id}
+            className="card-enter group flex flex-col bg-white border border-slate-100 rounded-3xl p-5 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+            style={{ "--enter-delay": `${Math.min(index, 8) * 50}ms` } as React.CSSProperties}
+          >
             <div className="aspect-[3/4] rounded-2xl bg-slate-50 mb-5 overflow-hidden relative shadow-inner">
-              {book.cover_image_path ? (
-                <img
-                  src={book.cover_image_path}
-                  alt={book.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-              ) : (
+              <BookCover
+                src={book.cover_image_path}
+                alt={book.title}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              >
                 <div className="w-full h-full flex flex-col items-center justify-center text-slate-300">
                   <BookOpen className="w-12 h-12 mb-2 opacity-20" />
                   <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">Sin Portada</span>
                 </div>
-              )}
+              </BookCover>
               {/* Badge Digital */}
               {book.ebooks_total > 0 && (
                 <div className="absolute top-3 right-3 bg-blue-500 text-white text-[10px] font-black px-2 py-1 rounded-lg shadow-lg">
@@ -111,8 +115,8 @@ export default async function ExplorerPage({
               <p className="text-xs text-slate-400 line-clamp-1 italic">{book.authors}</p>
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-slate-50">
-              <div className="flex flex-col">
+            <div className="mt-auto pt-4 border-t border-slate-50 space-y-3">
+              <div className="flex items-baseline justify-between gap-2">
                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Físico</span>
                 <span className={clsx(
                   "text-xs font-black",
@@ -121,13 +125,15 @@ export default async function ExplorerPage({
                   {book.physical_available > 0 ? `${book.physical_available} Disponibles` : "Agotado"}
                 </span>
               </div>
-              
+
               <div className="flex gap-2">
-                 <LoanButton bookId={book.id} disabled={book.physical_available <= 0} userLoggedIn={true} />
+                 <div className="flex-1">
+                   <LoanButton bookId={book.id} disabled={book.physical_available <= 0} userLoggedIn={true} />
+                 </div>
                  {book.ebooks_total > 0 && (
-                    <Link 
+                    <Link
                       href={`/read/${book.id}`}
-                      className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm active:scale-90"
+                      className="flex items-center p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm active:scale-90"
                       title="Leer Online"
                     >
                       <BookOpen className="w-5 h-5" />
@@ -151,5 +157,3 @@ export default async function ExplorerPage({
     </div>
   );
 }
-
-import { clsx } from "clsx";
