@@ -41,7 +41,7 @@ Regla del proyecto: **no cambiar comportamiento base** — solo visual, validaci
 
 - [x] Fade-in + stagger sutil de cards al cargar el grid (Home/Explorer). ✅ Hecho — clase `.card-enter` (CSS keyframes, sin JS) con delay escalonado `--enter-delay` capped a 8 cards.
 - [x] Transición al expandir filas de inventario — ya existía (`animate-in fade-in slide-in-from-top-1`), no se tocó.
-- [x] Skeleton loaders. ✅ Hecho — `src/app/dashboard/loading.tsx` con grid de skeletons + clase `.skeleton` reutilizable.
+- [x] Skeleton loaders. ✅ Hecho — un `loading.tsx` por ruta que imita el layout real de cada vista: explorer (grid de cards), inventory (filtros + tabla), loans (filtros + filas), users (form + tabla), profile (resumen + form), my-loans (lista) y dashboard (bienvenida). Clase `.skeleton` reutilizable.
 - [x] Transición de página sutil en el dashboard. ✅ Hecho — `src/app/dashboard/template.tsx` (remonta por navegación) + clase `.page-enter` (fade opacity 180ms, respeta reduced-motion).
 - [x] Respetar `prefers-reduced-motion`. ✅ Hecho — media query global en globals.css desactiva animaciones/transiciones.
 - [x] Animar entrada de errores inline del login — ✅ incluido en la validación (motion.p fade/slide).
