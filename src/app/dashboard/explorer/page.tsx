@@ -122,7 +122,9 @@ export default async function ExplorerPage({
                   "text-xs font-black",
                   book.physical_available > 0 ? "text-emerald-600" : "text-rose-500"
                 )}>
-                  {book.physical_available > 0 ? `${book.physical_available} Disponibles` : "Agotado"}
+                  {book.physical_available > 0
+                    ? `${book.physical_available} ${book.physical_available === 1 ? "Disponible" : "Disponibles"}`
+                    : "Agotado"}
                 </span>
               </div>
 

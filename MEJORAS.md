@@ -22,19 +22,19 @@ Regla del proyecto: **no cambiar comportamiento base** — solo visual, validaci
 
 - [x] **Login** (`/login`): ✅ Hecho — validación inline al blur con mensajes bajo el campo + borde rojo, toggle 👁 mostrar contraseña, submit bloqueado si inválido. (El spinner de carga ya existía.) Verificado: flujo válido intacto.
 - [x] **Crear Usuario** (`/dashboard/users`): ✅ Hecho — email/nombre/cédula con error inline al blur, hint "Mínimo 6 caracteres" en vivo (gris→rojo→verde), hint ámbar "solo números" al tipear letras en cédula/teléfono, submit bloqueado si inválido (mismas reglas que las nativas anteriores — sin cambio de comportamiento). Helper compartido en `src/lib/validation.ts`.
-- [ ] **Inventario expandido**: validar `cantidad >= 1` en "Registrar Copias" y formato URL en "Enlazar E-Book" con feedback inline (no se probó en vivo para no mutar datos — revisar `inventory-manager.tsx`).
+- [x] **Inventario expandido**: ✅ Hecho — cantidad (1-50, entero) y URL (http/https) con error inline al blur, borde rojo y submit bloqueado, en tabla desktop y cards móvil (mismas reglas que las nativas — `noValidate` + hook compartido `useInventoryForms`). Sin mutar datos: el submit bloqueado ocurre antes de llamar al server action.
 - [x] **Recuperar contraseña**: ✅ Hecho — validación inline de email al blur. (El estado de envío y mensaje de éxito ya existían.)
-- [ ] **Perfil**: validación inline de teléfono en "Guardar Cambios".
+- [x] **Perfil**: ✅ Hecho — nombre obligatorio con error inline al blur (misma regla que el server action), hint ámbar en teléfono si tiene caracteres inválidos (advisorio, no bloquea: el servidor acepta libre), placeholder en nombre.
 
 ## 🟡 P3 — Mejoras visuales
 
 - [x] **Banner "Activa notificaciones push" aparece en TODAS las páginas**: ✅ Hecho — botón X que persiste en localStorage (`push-banner-dismissed`), el banner verde de "activas" ya no se muestra (éxito silencioso), y el wrapper ya no deja hueco vacío cuando no hay banner. La lógica de suscripción push quedó intacta.
-- [ ] **Pie de cards en Home desalineado**: badges "X DISPONIBLES" y botones quedan a alturas distintas según el contenido (758px lo empeora: botones a 2 líneas). Anclar footer con `mt-auto` (card como flex-col) y alinear badges.
-- [x] **Pluralización**: ✅ Hecho — "1 Copia" singular en inventario (tabla desktop y card móvil). Pendiente menor: "1 Disponibles" en cards del catálogo.
+- [x] **Pie de cards en Home desalineado**: ✅ Resuelto junto con el fix del grid — el footer ya usa `mt-auto` (card como flex-col) y los badges quedan alineados.
+- [x] **Pluralización**: ✅ Hecho — "1 Copia" singular en inventario (tabla desktop y card móvil) y "1 Disponible" en cards del catálogo (Home y Explorer).
 - [x] **Grid del Home en 768px** muestra 3 columnas muy apretadas. ✅ Hecho: ahora 2 en `sm-lg`, 3 en `lg`, 4 en `xl` — botones ya no envuelven y badges quedan alineados.
 - [x] **Anchos inconsistentes en dashboard**: ✅ Hecho — banner push ahora `max-w-7xl` (alineado con las páginas de staff), Usuarios pasó de 6xl a 7xl. Las páginas de bienvenida/perfil/mis-préstamos quedan angostas a propósito (contenido liviano).
-- [ ] **Selects nativos sin estilizar** (fechas `dd/mm/aaaa`, "Mostrando 5 por página") desentonan con el resto del diseño redondeado.
-- [ ] **Paginación de inventario**: botones prev/next sin `aria-label` (accesibilidad).
+- [x] **Selects nativos sin estilizar**: ✅ Hecho — select de estado y fechas de Préstamos ahora con borde slate, fondo blanco, sombra y focus ring naranja (+ `aria-label` cada uno); botones Anterior/Siguiente con el mismo estilo; "Mostrando 5 por página" consolidado en una sola frase.
+- [x] **Paginación de inventario**: ✅ Hecho — `aria-label` en prev/next y en los números de página, más `aria-current="page"` en la página activa.
 - [x] **Select "Rol a Asignar" tiene una sola opción** — RESUELTO: es intencional (regla de negocio comentada en el código: admin crea bibliotecarios, bibliotecario crea estudiantes). No tocar.
 
 ## 🟢 P4 — Animaciones ligeras (framer-motion ya está instalado)
@@ -42,7 +42,7 @@ Regla del proyecto: **no cambiar comportamiento base** — solo visual, validaci
 - [x] Fade-in + stagger sutil de cards al cargar el grid (Home/Explorer). ✅ Hecho — clase `.card-enter` (CSS keyframes, sin JS) con delay escalonado `--enter-delay` capped a 8 cards.
 - [x] Transición al expandir filas de inventario — ya existía (`animate-in fade-in slide-in-from-top-1`), no se tocó.
 - [x] Skeleton loaders. ✅ Hecho — `src/app/dashboard/loading.tsx` con grid de skeletons + clase `.skeleton` reutilizable.
-- [ ] Transición de página sutil en el dashboard (opacity 150-200ms) — opcional, no implementada.
+- [x] Transición de página sutil en el dashboard. ✅ Hecho — `src/app/dashboard/template.tsx` (remonta por navegación) + clase `.page-enter` (fade opacity 180ms, respeta reduced-motion).
 - [x] Respetar `prefers-reduced-motion`. ✅ Hecho — media query global en globals.css desactiva animaciones/transiciones.
 - [x] Animar entrada de errores inline del login — ✅ incluido en la validación (motion.p fade/slide).
 

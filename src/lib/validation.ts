@@ -20,3 +20,32 @@ export function validateMinLength(
   if (value.length < min) return shortMessage;
   return null;
 }
+
+export function validateQuantity(
+  value: string,
+  min: number,
+  max: number,
+): string | null {
+  if (!value.trim()) return "La cantidad es obligatoria.";
+  const n = Number(value);
+  if (!Number.isInteger(n)) return "La cantidad debe ser un número entero.";
+  if (n < min) return `La cantidad mínima es ${min}.`;
+  if (n > max) return `La cantidad máxima es ${max}.`;
+  return null;
+}
+
+export function validateUrl(value: string): string | null {
+  if (!value.trim()) return "La URL del recurso es obligatoria.";
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol !== "http:" && url.protocol !== "https:")
+      return "La URL debe comenzar con http:// o https://";
+  } catch {
+    return "Ingresa una URL válida (ej: https://ejemplo.com/documento.pdf).";
+  }
+  return null;
+}
+
+export function hasInvalidPhoneChars(value: string): boolean {
+  return !/^[0-9+\-()\s]*$/.test(value);
+}

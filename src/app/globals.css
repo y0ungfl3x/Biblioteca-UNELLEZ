@@ -35,6 +35,20 @@ body {
   animation-delay: var(--enter-delay, 0ms);
 }
 
+/* Transición sutil al navegar entre páginas del dashboard */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.page-enter {
+  animation: page-enter 0.18s ease-out both;
+}
+
 /* Pulso para skeletons de carga */
 @keyframes skeleton-pulse {
   0%, 100% {
@@ -53,6 +67,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .card-enter,
+  .page-enter,
   .skeleton {
     animation: none;
   }

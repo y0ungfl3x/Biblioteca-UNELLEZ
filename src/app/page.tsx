@@ -210,7 +210,10 @@ export default async function CatalogPage({
                       </span>
                     ) : book.physical_available > 0 ? (
                       <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        {book.physical_available} Disponibles
+                        {book.physical_available}{" "}
+                        {book.physical_available === 1
+                          ? "Disponible"
+                          : "Disponibles"}
                       </span>
                     ) : (
                       <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-50 text-slate-500 border border-slate-200">

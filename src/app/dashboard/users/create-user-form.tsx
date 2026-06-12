@@ -134,6 +134,7 @@ export function CreateUserForm({ currentRole }: { currentRole?: string }) {
         <input
           name="full_name"
           required
+          placeholder="Ej: María Pérez García"
           value={values.full_name}
           onChange={(e) => setValue("full_name", e.target.value)}
           onBlur={() => markTouched("full_name")}
@@ -169,6 +170,7 @@ export function CreateUserForm({ currentRole }: { currentRole?: string }) {
           name="email"
           type="email"
           required
+          placeholder="usuario@unellez.edu.ve"
           value={values.email}
           onChange={(e) => setValue("email", e.target.value)}
           onBlur={() => markTouched("email")}

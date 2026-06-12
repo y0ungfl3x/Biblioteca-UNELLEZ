@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { updateProfile } from "@/app/actions/profile";
-import { Loader2, Save, User, Phone, Lock } from "lucide-react";
+import { Loader2, Save, User, Phone, Lock, AlertCircle, Info } from "lucide-react";
 import { toast } from "sonner";
+import { validateRequired, hasInvalidPhoneChars } from "@/lib/validation";
 
 interface Profile {
   id: string;
@@ -15,10 +16,21 @@ interface Profile {
 
 export function ProfileForm({ initialProfile }: { initialProfile: Profile }) {
   const [loading, setLoading] = useState(false);
+  const [fullName, setFullName] = useState(initialProfile.full_name);
+  const [phone, setPhone] = useState(initialProfile.phone || "");
+  const [nameTouched, setNameTouched] = useState(false);
+
+  const nameError = validateRequired(fullName, "El nombre completo es obligatorio.");
+  const phoneHint = hasInvalidPhoneChars(phone);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (loading) return;
+
+    if (nameError) {
+      setNameTouched(true);
+      return;
+    }
 
     setLoading(true);
     const formData = new FormData(event.currentTarget);
@@ -33,7 +45,7 @@ export function ProfileForm({ initialProfile }: { initialProfile: Profile }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} noValidate className="space-y-6">
       <div className="border-b border-slate-100 pb-4">
         <h3 className="text-lg font-bold text-slate-900">Información del Perfil</h3>
         <p className="text-xs text-slate-500">Actualiza tus datos públicos de contacto.</p>
@@ -48,10 +60,25 @@ export function ProfileForm({ initialProfile }: { initialProfile: Profile }) {
               name="full_name"
               type="text"
               required
-              defaultValue={initialProfile.full_name}
-              className="w-full pl-10 bg-white border border-slate-300 rounded-xl px-4 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 outline-none transition-all shadow-sm font-semibold"
+              placeholder="Ej: María Pérez García"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              onBlur={() => setNameTouched(true)}
+              aria-invalid={!!(nameTouched && nameError)}
+              aria-describedby={nameTouched && nameError ? "profile-name-error" : undefined}
+              className={`w-full pl-10 bg-white border rounded-xl px-4 py-2 text-sm text-slate-900 focus:ring-2 outline-none transition-all shadow-sm font-semibold ${
+                nameTouched && nameError
+                  ? "border-red-300 focus:ring-red-500/40 focus:border-red-500"
+                  : "border-slate-300 focus:ring-orange-500/50 focus:border-orange-500"
+              }`}
             />
           </div>
+          {nameTouched && nameError && (
+            <p id="profile-name-error" className="text-xs text-red-600 ml-1 flex items-center gap-1">
+              <AlertCircle className="w-3 h-3 shrink-0" />
+              {nameError}
+            </p>
+          )}
         </div>
 
         <div className="space-y-1">
@@ -62,10 +89,17 @@ export function ProfileForm({ initialProfile }: { initialProfile: Profile }) {
               name="phone"
               type="tel"
               placeholder="+58 412-1234567"
-              defaultValue={initialProfile.phone || ""}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
               className="w-full pl-10 bg-white border border-slate-300 rounded-xl px-4 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 outline-none transition-all shadow-sm font-semibold"
             />
           </div>
+          {phoneHint && (
+            <p className="text-xs text-amber-600 ml-1 flex items-center gap-1">
+              <Info className="w-3 h-3 shrink-0" />
+              Usa solo números, espacios y los símbolos + - ( ).
+            </p>
+          )}
         </div>
       </div>
 
