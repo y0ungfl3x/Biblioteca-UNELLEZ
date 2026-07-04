@@ -21,8 +21,8 @@ export default async function UsersPage() {
     console.error("Error fetching current user profile:", profileError);
   }
 
-  if (currentUserProfile?.role === "estudiante" || currentUserProfile?.role === "invitado") {
-    // Si no es admin o bibliotecario, no debería estar aquí
+  const isStaff = currentUserProfile?.role === "administrador" || currentUserProfile?.role === "bibliotecario";
+  if (!currentUserProfile || !isStaff) {
     redirect("/dashboard");
   }
 

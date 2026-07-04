@@ -78,16 +78,21 @@ export async function createSystemUser(formData: FormData) {
 
   const role = formData.get("role") as string;
 
-  // Regla de Negocio:
   // Administradores -> Solo pueden crear bibliotecarios.
-  // Bibliotecarios -> Solo pueden crear estudiantes.
+  // Bibliotecarios -> Pueden crear estudiantes, docentes, administrativos y obreros.
   if (profile.role === "administrador" && role !== "bibliotecario") {
     return {
       error: "Los administradores solo pueden registrar bibliotecarios",
     };
   }
-  if (profile.role === "bibliotecario" && role !== "estudiante") {
-    return { error: "Los bibliotecarios solo pueden registrar estudiantes" };
+  if (
+    profile.role === "bibliotecario" &&
+    !["estudiante", "docente", "administrativo", "obrero"].includes(role)
+  ) {
+    return {
+      error:
+        "Los bibliotecarios solo pueden registrar estudiantes, docentes, administrativos y obreros",
+    };
   }
 
   const email = formData.get("email") as string;

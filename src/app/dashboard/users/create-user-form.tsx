@@ -84,12 +84,11 @@ export function CreateUserForm({ currentRole }: { currentRole?: string }) {
     setIsLoading(false);
   }
 
-  // Regla de Negocio:
   // Administradores -> Solo pueden crear bibliotecarios.
-  // Bibliotecarios -> Solo pueden crear estudiantes.
+  // Bibliotecarios -> Pueden crear estudiantes, docentes, administrativos y obreros.
   const availableRoles = currentRole === 'administrador'
     ? ['bibliotecario']
-    : ['estudiante'];
+    : ['estudiante', 'docente', 'administrativo', 'obrero'];
 
   const passwordOk = values.password.length >= 6;
 
