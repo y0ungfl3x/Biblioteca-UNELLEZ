@@ -17,8 +17,9 @@ export default async function LoansPage() {
     .select("role")
     .eq("id", user.id)
     .single();
+  const isStaff = profile?.role === "administrador" || profile?.role === "bibliotecario";
 
-  if (profile?.role === "estudiante" || profile?.role === "invitado") {
+  if (!profile || !isStaff) {
     redirect("/dashboard");
   }
 

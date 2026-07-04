@@ -48,7 +48,8 @@ export async function updateLoanStatus(loanId: string, newStatus: string) {
     .select("role")
     .eq("id", user.id)
     .single();
-  if (profile?.role === "estudiante" || profile?.role === "invitado")
+  const isStaff = profile?.role === "administrador" || profile?.role === "bibliotecario";
+  if (!profile || !isStaff)
     return { error: "No autorizado" };
 
   // Obtener los datos del préstamo actual antes de actualizar
@@ -218,7 +219,7 @@ export async function renewLoan(loanId: string) {
   // 2. Verificar estado del perfil del usuario (sanciones activas)
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("status, suspended_until")
+    .select("status, suspended_until, role")
     .eq("id", user.id)
     .single();
 
@@ -266,7 +267,7 @@ export async function renewLoan(loanId: string) {
   // Registrar en auditoría
   await supabase.from("audit_log").insert({
     actor_user_id: user.id,
-    actor_role: "estudiante",
+    actor_role: profile?.role || "estudiante",
     action: "renovacion_prestamo",
     entity: "loans",
     entity_id: loanId,

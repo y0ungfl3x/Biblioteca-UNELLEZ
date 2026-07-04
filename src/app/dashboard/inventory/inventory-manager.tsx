@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
-  Search, CopyPlus, Link as LinkIcon, ChevronDown, ChevronUp, 
-  Loader2, BookCopy, FileText, Filter, ChevronLeft, ChevronRight 
+import {
+  Search, CopyPlus, Link as LinkIcon, ChevronDown, ChevronUp,
+  Loader2, BookCopy, FileText, Filter, ChevronLeft, ChevronRight, AlertCircle
 } from "lucide-react";
 import { addPhysicalCopies, linkEbook } from "@/app/actions/inventory";
+import { validateQuantity, validateUrl } from "@/lib/validation";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
 
@@ -180,6 +181,7 @@ export function InventoryManager({
               <button
                 disabled={currentPage <= 1}
                 onClick={() => updateFilters({ page: currentPage - 1 })}
+                aria-label="Página anterior"
                 className="p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -193,6 +195,8 @@ export function InventoryManager({
                       <button
                         key={pageNum}
                         onClick={() => updateFilters({ page: pageNum })}
+                        aria-label={`Ir a la página ${pageNum}`}
+                        aria-current={currentPage === pageNum ? "page" : undefined}
                         className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
                           currentPage === pageNum 
                             ? "bg-orange-500 text-white shadow-sm" 
@@ -211,6 +215,7 @@ export function InventoryManager({
               <button
                 disabled={currentPage >= totalPages}
                 onClick={() => updateFilters({ page: currentPage + 1 })}
+                aria-label="Página siguiente"
                 className="p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 transition-colors"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -223,27 +228,73 @@ export function InventoryManager({
   );
 }
 
-function BookRow({ book, isExpanded, onToggle }: { book: InventoryBook, isExpanded: boolean, onToggle: () => void }) {
+function useInventoryForms() {
   const [loadingPhysical, setLoadingPhysical] = useState(false);
   const [loadingEbook, setLoadingEbook] = useState(false);
+  const [quantity, setQuantity] = useState("1");
+  const [quantityTouched, setQuantityTouched] = useState(false);
+  const [url, setUrl] = useState("");
+  const [urlTouched, setUrlTouched] = useState(false);
+
+  const quantityError = validateQuantity(quantity, 1, 50);
+  const urlError = validateUrl(url);
 
   async function handleAddPhysical(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (quantityError) {
+      setQuantityTouched(true);
+      return;
+    }
     setLoadingPhysical(true);
     const formData = new FormData(e.currentTarget);
     await addPhysicalCopies(formData);
     setLoadingPhysical(false);
+    setQuantity("1");
+    setQuantityTouched(false);
     (e.target as HTMLFormElement).reset();
   }
 
   async function handleAddEbook(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (urlError) {
+      setUrlTouched(true);
+      return;
+    }
     setLoadingEbook(true);
     const formData = new FormData(e.currentTarget);
     await linkEbook(formData);
     setLoadingEbook(false);
+    setUrl("");
+    setUrlTouched(false);
     (e.target as HTMLFormElement).reset();
   }
+
+  return {
+    loadingPhysical, loadingEbook,
+    quantity, setQuantity, quantityTouched, setQuantityTouched,
+    url, setUrl, urlTouched, setUrlTouched,
+    quantityError, urlError,
+    handleAddPhysical, handleAddEbook,
+  };
+}
+
+function InventoryFieldError({ message }: { message: string }) {
+  return (
+    <p className="text-xs text-red-600 mt-1.5 ml-1 flex items-center gap-1">
+      <AlertCircle className="w-3 h-3 shrink-0" />
+      {message}
+    </p>
+  );
+}
+
+function BookRow({ book, isExpanded, onToggle }: { book: InventoryBook, isExpanded: boolean, onToggle: () => void }) {
+  const {
+    loadingPhysical, loadingEbook,
+    quantity, setQuantity, quantityTouched, setQuantityTouched,
+    url, setUrl, urlTouched, setUrlTouched,
+    quantityError, urlError,
+    handleAddPhysical, handleAddEbook,
+  } = useInventoryForms();
 
   return (
     <>
@@ -261,7 +312,7 @@ function BookRow({ book, isExpanded, onToggle }: { book: InventoryBook, isExpand
           <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border shadow-sm ${
             book.physical_total > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'
           }`}>
-            {book.physical_total} Copias
+            {book.physical_total} {book.physical_total === 1 ? 'Copia' : 'Copias'}
           </span>
         </td>
         <td className="px-6 py-4">
@@ -289,13 +340,30 @@ function BookRow({ book, isExpanded, onToggle }: { book: InventoryBook, isExpand
                   <BookCopy className="w-4 h-4 text-orange-600" />
                   <span>Control de Stock Físico</span>
                 </h4>
-                <form onSubmit={handleAddPhysical} className="space-y-4">
+                <form onSubmit={handleAddPhysical} noValidate className="space-y-4">
                   <input type="hidden" name="bookId" value={book.id} />
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 ml-1">Cantidad</label>
-                      <input type="number" name="quantity" min="1" max="50" required defaultValue="1" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none transition-all font-medium" />
+                      <input
+                        type="number"
+                        name="quantity"
+                        min="1"
+                        max="50"
+                        required
+                        placeholder="Ej: 1"
+                        value={quantity}
+                        onChange={(e) => setQuantity(e.target.value)}
+                        onBlur={() => setQuantityTouched(true)}
+                        aria-invalid={!!(quantityTouched && quantityError)}
+                        className={`w-full bg-slate-50 border rounded-xl px-4 py-2.5 text-sm focus:ring-4 outline-none transition-all font-medium ${
+                          quantityTouched && quantityError
+                            ? "border-red-300 focus:ring-red-500/10 focus:border-red-500"
+                            : "border-slate-200 focus:ring-orange-500/10 focus:border-orange-500"
+                        }`}
+                      />
+                      {quantityTouched && quantityError && <InventoryFieldError message={quantityError} />}
                     </div>
                     
                     <div>
@@ -320,12 +388,27 @@ function BookRow({ book, isExpanded, onToggle }: { book: InventoryBook, isExpand
                   <FileText className="w-4 h-4 text-orange-600" />
                   <span>Documento Digital</span>
                 </h4>
-                <form onSubmit={handleAddEbook} className="space-y-4">
+                <form onSubmit={handleAddEbook} noValidate className="space-y-4">
                   <input type="hidden" name="bookId" value={book.id} />
-                  
+
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 ml-1">URL del Recurso (PDF/EPUB)</label>
-                    <input type="url" name="url" required placeholder="https://biblioteca.unellez.edu.ve/documento.pdf" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none transition-all font-medium" />
+                    <input
+                      type="url"
+                      name="url"
+                      required
+                      placeholder="https://biblioteca.unellez.edu.ve/documento.pdf"
+                      value={url}
+                      onChange={(e) => setUrl(e.target.value)}
+                      onBlur={() => setUrlTouched(true)}
+                      aria-invalid={!!(urlTouched && urlError)}
+                      className={`w-full bg-slate-50 border rounded-xl px-4 py-2.5 text-sm focus:ring-4 outline-none transition-all font-medium ${
+                        urlTouched && urlError
+                          ? "border-red-300 focus:ring-red-500/10 focus:border-red-500"
+                          : "border-slate-200 focus:ring-orange-500/10 focus:border-orange-500"
+                      }`}
+                    />
+                    {urlTouched && urlError && <InventoryFieldError message={urlError} />}
                     <p className="text-[10px] text-slate-400 mt-2 ml-1">Vincular un archivo externo o de Supabase Storage para lectura online.</p>
                   </div>
 
@@ -344,26 +427,13 @@ function BookRow({ book, isExpanded, onToggle }: { book: InventoryBook, isExpand
 }
 
 function MobileBookCard({ book, isExpanded, onToggle }: { book: InventoryBook, isExpanded: boolean, onToggle: () => void }) {
-  const [loadingPhysical, setLoadingPhysical] = useState(false);
-  const [loadingEbook, setLoadingEbook] = useState(false);
-
-  async function handleAddPhysical(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoadingPhysical(true);
-    const formData = new FormData(e.currentTarget);
-    await addPhysicalCopies(formData);
-    setLoadingPhysical(false);
-    (e.target as HTMLFormElement).reset();
-  }
-
-  async function handleAddEbook(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoadingEbook(true);
-    const formData = new FormData(e.currentTarget);
-    await linkEbook(formData);
-    setLoadingEbook(false);
-    (e.target as HTMLFormElement).reset();
-  }
+  const {
+    loadingPhysical, loadingEbook,
+    quantity, setQuantity, quantityTouched, setQuantityTouched,
+    url, setUrl, urlTouched, setUrlTouched,
+    quantityError, urlError,
+    handleAddPhysical, handleAddEbook,
+  } = useInventoryForms();
 
   return (
     <div className={clsx("flex flex-col transition-all", isExpanded ? "bg-orange-50/30" : "bg-white")}>
@@ -377,7 +447,7 @@ function MobileBookCard({ book, isExpanded, onToggle }: { book: InventoryBook, i
             <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
               book.physical_total > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'
             }`}>
-              {book.physical_total} Copias
+              {book.physical_total} {book.physical_total === 1 ? 'Copia' : 'Copias'}
             </span>
             <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
               book.ebooks_total > 0 ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-500 border-slate-200'
@@ -402,16 +472,31 @@ function MobileBookCard({ book, isExpanded, onToggle }: { book: InventoryBook, i
               <BookCopy className="w-4 h-4 text-orange-600" />
               <span>STOCK FÍSICO</span>
             </h4>
-            <form onSubmit={handleAddPhysical} className="space-y-4">
+            <form onSubmit={handleAddPhysical} noValidate className="space-y-4">
               <input type="hidden" name="bookId" value={book.id} />
               <div className="grid grid-cols-2 gap-3">
-                <input type="number" name="quantity" min="1" max="50" required defaultValue="1" className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none font-medium" />
+                <input
+                  type="number"
+                  name="quantity"
+                  min="1"
+                  max="50"
+                  required
+                  placeholder="Ej: 1"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  onBlur={() => setQuantityTouched(true)}
+                  aria-invalid={!!(quantityTouched && quantityError)}
+                  className={`bg-slate-50 border rounded-xl px-3 py-2 text-sm outline-none font-medium ${
+                    quantityTouched && quantityError ? "border-red-300" : "border-slate-200"
+                  }`}
+                />
                 <select name="condition" className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none font-medium">
                   <option value="nuevo">Nuevo</option>
                   <option value="bueno">Bueno</option>
                   <option value="regular">Regular</option>
                 </select>
               </div>
+              {quantityTouched && quantityError && <InventoryFieldError message={quantityError} />}
               <button type="submit" disabled={loadingPhysical} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-100 transition-all active:scale-95">
                 {loadingPhysical ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CopyPlus className="w-4 h-4" /> REGISTRAR STOCK</>}
               </button>
@@ -424,9 +509,22 @@ function MobileBookCard({ book, isExpanded, onToggle }: { book: InventoryBook, i
               <FileText className="w-4 h-4 text-orange-600" />
               <span>E-BOOK / PDF</span>
             </h4>
-            <form onSubmit={handleAddEbook} className="space-y-4">
+            <form onSubmit={handleAddEbook} noValidate className="space-y-4">
               <input type="hidden" name="bookId" value={book.id} />
-              <input type="url" name="url" required placeholder="https://archivo.pdf" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none font-medium" />
+              <input
+                type="url"
+                name="url"
+                required
+                placeholder="https://archivo.pdf"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                onBlur={() => setUrlTouched(true)}
+                aria-invalid={!!(urlTouched && urlError)}
+                className={`w-full bg-slate-50 border rounded-xl px-3 py-2 text-sm outline-none font-medium ${
+                  urlTouched && urlError ? "border-red-300" : "border-slate-200"
+                }`}
+              />
+              {urlTouched && urlError && <InventoryFieldError message={urlError} />}
               <button type="submit" disabled={loadingEbook} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-md shadow-blue-100 transition-all active:scale-95">
                 {loadingEbook ? <Loader2 className="w-4 h-4 animate-spin" /> : <><LinkIcon className="w-4 h-4" /> VINCULAR DIGITAL</>}
               </button>

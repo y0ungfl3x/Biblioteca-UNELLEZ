@@ -9,9 +9,9 @@ export async function addPhysicalCopies(formData: FormData) {
 
   if (!user) return { error: "No autorizado" };
 
-  // Verificar rol (solo admin o bibliotecario)
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-  if (profile?.role === "estudiante" || profile?.role === "invitado") {
+  const isStaff = profile?.role === "administrador" || profile?.role === "bibliotecario";
+  if (!profile || !isStaff) {
     return { error: "Permisos insuficientes" };
   }
 
@@ -57,7 +57,8 @@ export async function linkEbook(formData: FormData) {
   if (!user) return { error: "No autorizado" };
 
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-  if (profile?.role === "estudiante" || profile?.role === "invitado") {
+  const isStaff = profile?.role === "administrador" || profile?.role === "bibliotecario";
+  if (!profile || !isStaff) {
     return { error: "Permisos insuficientes" };
   }
 

@@ -11,16 +11,34 @@ import {
   AlertCircle,
   Loader2,
   ArrowLeft,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { validateEmail, validateRequired } from "@/lib/validation";
 
 export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [touched, setTouched] = useState({ email: false, password: false });
+  const [showPassword, setShowPassword] = useState(false);
+
+  const emailError = validateEmail(email);
+  const passwordError = validateRequired(password, "La contraseña es obligatoria.");
+  const showEmailError = touched.email && emailError;
+  const showPasswordError = touched.password && passwordError;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (emailError || passwordError) {
+      setTouched({ email: true, password: true });
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -77,7 +95,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} noValidate className="space-y-5">
             {error && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
@@ -101,9 +119,30 @@ export default function LoginPage() {
                   name="email"
                   type="email"
                   required
-                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all shadow-sm"
+                  placeholder="usuario@unellez.edu.ve"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+                  aria-invalid={!!showEmailError}
+                  aria-describedby={showEmailError ? "email-error" : undefined}
+                  className={`block w-full pl-10 pr-3 py-2.5 border rounded-xl bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 transition-all shadow-sm ${
+                    showEmailError
+                      ? "border-red-300 focus:ring-red-500/40 focus:border-red-500"
+                      : "border-slate-200 focus:ring-orange-500/50 focus:border-orange-500"
+                  }`}
                 />
               </div>
+              {showEmailError && (
+                <motion.p
+                  id="email-error"
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-xs text-red-600 ml-1 flex items-center gap-1"
+                >
+                  <AlertCircle className="w-3 h-3 shrink-0" />
+                  {emailError}
+                </motion.p>
+              )}
             </div>
 
             <div className="space-y-1">
@@ -116,11 +155,40 @@ export default function LoginPage() {
                 </div>
                 <input
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
-                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all shadow-sm"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onBlur={() => setTouched((t) => ({ ...t, password: true }))}
+                  aria-invalid={!!showPasswordError}
+                  aria-describedby={showPasswordError ? "password-error" : undefined}
+                  className={`block w-full pl-10 pr-10 py-2.5 border rounded-xl bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 transition-all shadow-sm ${
+                    showPasswordError
+                      ? "border-red-300 focus:ring-red-500/40 focus:border-red-500"
+                      : "border-slate-200 focus:ring-orange-500/50 focus:border-orange-500"
+                  }`}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
               </div>
+              {showPasswordError && (
+                <motion.p
+                  id="password-error"
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-xs text-red-600 ml-1 flex items-center gap-1"
+                >
+                  <AlertCircle className="w-3 h-3 shrink-0" />
+                  {passwordError}
+                </motion.p>
+              )}
             </div>
 
             <div className="text-center mt-4">

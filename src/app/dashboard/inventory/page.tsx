@@ -28,8 +28,9 @@ export default async function InventoryPage({ searchParams }: Props) {
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  const isStaff = profile?.role === "administrador" || profile?.role === "bibliotecario";
   
-  if (profile?.role === "estudiante" || profile?.role === "invitado") {
+  if (!profile || !isStaff) {
     redirect("/dashboard");
   }
 

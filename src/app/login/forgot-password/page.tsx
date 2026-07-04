@@ -11,14 +11,26 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { validateEmail } from "@/lib/validation";
 
 export default function ForgotPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [touched, setTouched] = useState(false);
+
+  const emailError = validateEmail(email);
+  const showEmailError = touched && emailError;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (emailError) {
+      setTouched(true);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     setSuccess(null);
@@ -65,7 +77,7 @@ export default function ForgotPasswordPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} noValidate className="space-y-5">
           {error && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
@@ -103,9 +115,29 @@ export default function ForgotPasswordPage() {
                     type="email"
                     required
                     placeholder="usuario@unellez.edu.ve"
-                    className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all shadow-sm"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    onBlur={() => setTouched(true)}
+                    aria-invalid={!!showEmailError}
+                    aria-describedby={showEmailError ? "forgot-email-error" : undefined}
+                    className={`block w-full pl-10 pr-3 py-2.5 border rounded-xl bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 transition-all shadow-sm ${
+                      showEmailError
+                        ? "border-red-300 focus:ring-red-500/40 focus:border-red-500"
+                        : "border-slate-200 focus:ring-orange-500/50 focus:border-orange-500"
+                    }`}
                   />
                 </div>
+                {showEmailError && (
+                  <motion.p
+                    id="forgot-email-error"
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-xs text-red-600 ml-1 flex items-center gap-1"
+                  >
+                    <AlertCircle className="w-3 h-3 shrink-0" />
+                    {emailError}
+                  </motion.p>
+                )}
               </div>
 
               <button

@@ -21,8 +21,8 @@ export default async function UsersPage() {
     console.error("Error fetching current user profile:", profileError);
   }
 
-  if (currentUserProfile?.role === "estudiante" || currentUserProfile?.role === "invitado") {
-    // Si no es admin o bibliotecario, no debería estar aquí
+  const isStaff = currentUserProfile?.role === "administrador" || currentUserProfile?.role === "bibliotecario";
+  if (!currentUserProfile || !isStaff) {
     redirect("/dashboard");
   }
 
@@ -33,7 +33,7 @@ export default async function UsersPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <div className="p-8 max-w-6xl mx-auto space-y-8 relative z-10">
+    <div className="p-8 max-w-7xl mx-auto space-y-8 relative z-10">
       <div>
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Gestión de Usuarios</h1>
         <p className="text-slate-500 mt-1">Crea y administra cuentas de acceso al sistema bibliotecario.</p>
